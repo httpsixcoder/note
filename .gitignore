@@ -1,0 +1,21 @@
+# Python 虚拟环境
+.venv/
+venv/
+
+# PyCharm 项目配置
+.idea/
+*.iml
+
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 忽略所有 .txt 文件
+*.txt
+
+#忽略所有 .png 文件
+*.png
