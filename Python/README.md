@@ -6,11 +6,20 @@
 
 ## 📖 目录
 - [Day01：环境搭建与基础入门](#day01环境搭建与基础入门)
+
 - [Day02：数据类型与基础语法](#day02数据类型与基础语法)
+
 - [Day03：流程控制与序列](#day03流程控制与序列)
+
 - [Day04：字符串、元组、集合、字典与函数](#day04字符串元组集合字典与函数)
+
 - [Day05：函数进阶（函数、闭包与作用域）](#day05函数进阶函数闭包与作用域)
-- [Day06：文件操作与面向对象](#day06文件操作与面向对象)
+
+- [Day06：文件操作与面向对象基础](#day06文件操作与面向对象基础)
+
+- [Day07：面向对象进阶（魔法方法）](#day07面向对象进阶魔法方法)
+
+    ······持续更新中······
 
 ---
 
@@ -93,9 +102,20 @@ print("Hello, Atguigu!")
 
 ### 8. 基础运算符
 - **算术运算符**：`+`、`-`、`*`、`/`、`//`（整除）、`%`（取余）、`**`（幂运算）
+
 - **赋值运算符**：`=`、`+=`、`-=`、`*=`、`/=` 等
+
 - **比较运算符**：`>`、`<`、`==`、`!=`、`>=`、`<=`，返回布尔值
+
 - **逻辑运算符**：`and`、`or`、`not`
+
+- 海象运算符：海象运算符可减少单独一行赋值，精简代码，减少临时变量书写，在循环读取输入的时候很常用
+
+    ```python
+    if (x:=int(input()))>0:
+        print(x)
+   #必须加括号！`(x:=表达式)`    
+   ```
 
 ### 9. 今日踩坑记录
 - **坑1**：安装 Python 时忘记勾选 `Add Python to PATH`，导致命令行输入 `python` 提示“不是内部或外部命令”。解决办法：重新安装或手动配置环境变量。
@@ -115,6 +135,8 @@ print("Hello, Atguigu!")
 - **字符串**：`str`
 - **容器**：列表（`list`）、元组（`tuple`）、集合（`set`）、字典（`dict`）
 - **特殊**：`None`
+
+*【内置函数round 是 "银行家舍入"，四舍六入五成双，等于 5：看前一位，偶数就舍去，奇数就进1】*
 
 **可变与不可变类型：**
 - 不可变类型：数值、字符串、元组。**（指不能在原内存地址上修改数据）**
@@ -202,6 +224,11 @@ match 对象:
 - **循环选择**：明确次数使用 `for`，不明确使用 `while`。
 - **关键字**：`continue`、`break`、`pass`（占位）。
 
+```python
+# 打印进度条【暂停0.5秒】
+time.sleep(0.5)
+```
+
 ### 3. 序列
 - 可以存放不同类型的数据，有序（可以通过下标获取数据）。
 - 属于序列的容器数据类型：列表、元组、字符串。
@@ -229,10 +256,12 @@ list1 = [100, 200, 300, 400, 500]
   - `list1[:]` 复制整个列表（新列表对象）
   - `list1[::-1]` 倒序取出所有元素
 - 添加：`append(600)`（末尾）、`insert(2, 700)`（指定位置）
+    - list1=list1+[1,2]       id 变了【右边是新列表，list1指向它】
+    - list1+=[1,2]		id没变【等价于 nums1.extend([6, 7])】
 - 相加：`list1 + list2`（创建新列表）
 - 乘法：`list1 * 2`（相当于 `list1 + list1`）
 - 修改：`list1[0] = 0` 或切片修改 `list1[2:4] = ["30", "40", "50"]`
-- 遍历：直接遍历、下标遍历、`enumerate`
+- 遍历：直接遍历、下标遍历、`enumerate【获取下标和元素】`
 - 删除：`del list[2]`、`del list1`
 - 嵌套：`list3 = [[1,2,3], ['a','b','c'], [7,8,9]]`
 - 推导式：
@@ -278,7 +307,12 @@ list1 = [100, 200, 300, 400, 500]
 - 原始字符串：在字符串前面加 `r` 或 `R`（不转义）。
 - 替换：`str1.replace(old, new[, max])`
 - 分割：`str1.split('x'[, max])` / `rsplit`
-- 连接：`x.join(seq)` 以 x 为分隔符合并序列。
+- 连接：`x.join(seq)` 以 x 为分隔符合并序列。*【容器里面所有元素必须是字符串类型】*
+
+注意：区分 `split()` 和 `join()`（一对互操作）
+`"a,b,c".split(',')` → 按逗号切割，得到列表 `["a","b","c"]`
+`','.join(["a","b","c"])` → 列表合并为字符串 `"a,b,c"`
+
 - 截掉：
   - `strip(x)`：截掉两边所有的 x 字符（注意：是字符集，不是子串）
   - `lstrip()` / `rstrip()`：截掉左侧/右侧
@@ -339,16 +373,28 @@ list1 = [100, 200, 300, 400, 500]
   - `for k, v in dic1.items():`
 - 删除：`del dict[key]`、`dic1.pop('name')`、`dic1.popitem()`（取出最后插入的键值对）
 - 清空：`dic1.clear()`
-- 更新：`dic1.update(dic2)`
+- 更新：`dic1.update(dic2)`【批量处理】
 - 拷贝：`dic1.copy()`
 
 ### 5. 容器对比总结
-|   数据结构    | 是否可变 |      是否重复      |          是否有序          |     定义符号     |
-| :-----------: | :------: | :----------------: | :------------------------: | :--------------: |
-| 列表（list）  |   可变   |       可重复       |            有序            |  `[]`，`list()`  |
-| 元组（tuple） |  不可变  |       可重复       |            有序            | `(,)`，`tuple()` |
-|  集合（set）  |   可变   |       不重复       | 无序（Py3.7+保持插入顺序） |  `{}`，`set()`   |
-| 字典（dict）  |   可变   | key不可，value可以 |            无序            | `{:}`，`dict()`  |
+|              数据结构               | 是否可变 |      是否重复      |          是否有序          |     定义符号     |
+| :---------------------------------: | :------: | :----------------: | :------------------------: | :--------------: |
+|     列表（list）底层是动态数组      |   可变   |       可重复       |            有序            |  `[]`，`list()`  |
+|   元组（tuple）底层是定长只读数组   |  不可变  |       可重复       |            有序            | `(,)`，`tuple()` |
+| 集合（set）底层是哈希表（只存 key） |   可变   |       不重复       | 无序（Py3.7+保持插入顺序） |  `{}`，`set()`   |
+| 字典（dict）底层是哈希表 + 紧凑数组 |   可变   | key不可，value可以 |            无序            | `{:}`，`dict()`  |
+
+```python
+# - 不可变类型（int、str、tuple）都是可哈希的，可以作为 set 的元素和 dict 的 key。
+# - 可变类型（list、dict、set）不可哈希，不能放进 set。
+# 一个对象如果是“可变”的，它就绝对“不可哈希”；反之，“不可变”是“可哈希”的必要条件
+# 哈希容器（set、dict 的 key）之所以能实现“不可重复”，完全依赖于元素的“可哈希性”
+```
+
+```python
+# set3=set() #创建空的集合
+# dict1={} #创建字典
+```
 
 ------
 
@@ -384,8 +430,16 @@ def 函数名(参数列表):
 - **不定长参数**：
   - `*args`：底层封装成元组。如果在末尾正常传参；没在末尾必须用关键字传参。
   - `**kwargs`：底层封装成字典。必须在末尾，传参时以键值对传入。
+
+```python
+def func(**c):
+func(x=10, y=20, z=30) #c = {'x': 10, 'y': 20, 'z': 30}
+```
+
 - **解包传参**：`*tuple`（把元组元素分别取出）/ `**dict`（把字典键值对分别取出）。
 - **强制传参类型**：`/` 前必须使用位置传参，`*` 后必须使用关键字传参。
+
+**【在 Python 中，参数顺序必须是：位置参数 → *args → 关键字参数 → kwargs】**
 
 ### 4. 防止函数修改外部数据（深浅拷贝）
 - **浅拷贝**：`list[:]`、`list.copy()`、`list()`、`copy.copy()`。拷贝父对象，**不会拷贝内部的子对象**，只有第一层独立。
@@ -405,6 +459,10 @@ def 函数名(参数列表):
     1. 函数的嵌套定义（在一个函数的函数体中又定义了一个新的函数）。
     2. 内层函数访问外层函数的变量。
     3. 外层函数的返回值是内层函数对象。
+  - **闭包的经典应用场景**
+      - **装饰器**
+      - **延迟执行**（回调函数）
+      - **数据封装**（计数器）
 
 ### 7. 变量的作用域（LEGB）
 - 在程序中访问变量时，按照以下顺序寻找：
@@ -419,6 +477,43 @@ def 函数名(参数列表):
   - 在函数内部对变量赋值时，Python 默认将其当作局部变量，即使全局作用域已有同名变量。
   - **`global`**：在局部作用域中，声明使用的是全局变量。
   - **`nonlocal`**：在局部作用域中，声明使用的是嵌套变量。
+
+### 8.匿名函数
+
+​	Lambda函数定义匿名函数
+
+​	匿名函数作为内置函数的参数：
+
+​		sorted（）对序列中的元素排序
+
+​		map（）对序列中的元素逐一处理，返回的是一个map对象
+
+​		filter（）对序列中的元素过滤，返回是一个 filter对象
+
+​		reduce（）对序列中的累积，返回的是具体的结果值，归约聚合
+
+### 9.函数注释	func.\_\_annotations\_\_ 查看
+
+```python
+# 添加了注释的自定义函数
+def dog(name:str,age:(1,99),species:'狗的品种') -> tuple:
+    return(name,age,species)
+
+# 通过函数.__annotations来查看函数的说明    【函数的注释不具备强制性，可以不按注释传值】
+print(dog.__annotations__)
+```
+
+### 10.函数说明文档	help(print_info) 查看 “”“内容”“”
+
+```python
+def print_info(name,age):
+    '''这个函数完成了打印信息的功能'''
+    print(name,age)
+
+help(print_info) 
+#print_info(name, age)
+#    这个函数完成了打印信息的功能
+```
 
 ---
 *持续更新中，欢迎指点。*
@@ -459,6 +554,16 @@ open()：打开或者创建文件，该方法执行完毕后会返回一个file�
 
 ​			+	能读能写 
 
+```python
+# 建议用 with open，可以自动关闭文件，遇到异常也不会漏掉 close()：
+# with 语句的底层原理
+# with open(...) as f 背后的魔法方法是 __enter__ 和 __exit__。上下文管理器会用到。
+with open("./output.txt", "w", encoding="utf-8") as f:
+	f.write("This is a test.")
+with open("./output.txt", "r", encoding="utf-8") as f:
+	print(f.read())
+```
+
 close（）关闭【资源释放】
 
 ​	file.close()
@@ -476,6 +581,18 @@ copy_file(r"F:\1.png",r"E:\2.png")	r""
 ```
 
 ​	读：file.read()
+
+​		read(size)    读取文件指定大小的内容
+
+​			如果编码方式是t, 那么size表示字符数,
+
+​			如果编码方式是b, 那么size表示读取的是字节数
+
+```python
+while content := source_file.read(1024):
+    target_file.write(content)
+    # 迭代,读取位置会自动向后刷新
+```
 
 #### 3.常用函数
 
@@ -540,7 +657,11 @@ for root, dirs, files in os.walk(os.getcwd()):
 
 
 
-### 面向对象（OOP）
+## Day07：面向对象（OOP）
+
+- POP 面向过程，以步骤/过程为中心 怎么做
+- OOP 面向对象，万物皆对象 谁来做
+- FP 面向函数编程，函数是第一公民 做什么
 
 #### 1. 基本概念
 - **对象**：客观存在都是对象【万物皆对象】。
@@ -564,6 +685,8 @@ class 类名:
     # 方法定义
     def instance_method(self):  # 实例方法
         pass
+    
+print(Person.__doc__) #打印类的说明文档
 ```
 
 #### 3. 属性（Attributes）
@@ -591,13 +714,154 @@ class 类名:
     - 通过 `@staticmethod` 修饰。
     - 不需要实例化，直接通过 `类名.方法名()` 访问。无需传递 `self` 或 `cls`。
 - **魔法方法**：
-    - 格式为 `__xxx__`（双前缀下划线、双后缀下划线）。
-    - 这类方法不需要手动调用，执行特定操作时会自动触发。
+    - 格式 `__xxx__`（双前下划线、双后下划线）。这类方法不需要手动调用，执行特定操作时会自动触发。
+    - `def __new__(cls, *args, **kwargs)`
+        - 建对象时第一个被调用，真正构造
+        - 必须返回`return super().__new__(cls)`，否则 `__init__ `不会被触发。
+    - `def __init__(self, ...)`
+        - `__new__ `返回实例后调用，初始化赋值操作。只能返回 None
+    - `def __del__(self)`
+        - 对象引用计数归零时（被垃圾回收）。清理资源。
+    - `def __getattr__(self, name)`
+        - 访问不存在的属性时触发（兜底）。
+        - 避坑：内部要 raise AttributeError，否则会无限递归。
+        - 区分：`__getattribute__` 是每次访问属性都触发，极易死循环，新手别碰。
+    - `def __setattr__(self, name, value)`
+        - 每次执行 `self.name = value` 都触发。拦截赋值（可用于数据校验）。
+        - 避坑：必须调用 `super().__setattr__(name, value) `完成真正赋值，否则无限递归。
+    - `def __eq__(self, other)`
+        - 使用 == 比较时触发。定义“相等”的规则。
+        - 🔴 面试必考坑：重写 `__eq__` 后，Python 3 会自动把` __hash__` 设为 None，导致实例不可哈希（无法放进 set 或作为 dict 的 key）。
+        - 正确做法：重写 `__eq__` 的同时，也要重写 `__hash__`，比如 return hash((self.name, self.age))。
+    - `def __lt__(self, other):`【`__eq__（等于）、__lt__（小于）、__gt__（大于）`】
+        - 和其它对象比较 运算符的重载，例如`return self.age < other.age`
+    - `def __str__(self)`
+        - print(obj)、str(obj) 时触发。面向用户的友好展示。
+    - `def __repr__(self)`
+        - repr(obj)、交互式解释器直接输入对象时触发。面向开发者的精确展示。
+    - 三大避坑口诀
+        - `__new__` 要 `return super().__new__(cls)`，不然 `__init__ `罢工。
+        - `__getattr__` 里要 `raise AttributeError，__setattr__` 里要` super().__setattr`__，不然无限递归。
+        - 重写 `__eq__ `必须重写 `__hash__`，不然对象不能进 set 和 dict。
+
+```python
+"""
+    该案例演示了魔法方法
+"""
+class Student:
+    # 用于演示__new__的单例特性
+    _instance=None
+    def __new__(cls, *args, **kwargs):
+        print("1.__new__被调用：准备创建对象")
+        instance=super().__new__(cls) # 调用父类__new__ 真正分配内存【构造】
+        return instance # 如果然忘记return，不会执行__init__
+    def __init__(self, name, age):
+        print("2.__init__ 被调用：填充数据")
+        # 注意：下面这行会处罚__setattr__ 。赋值【初始化】
+        self.name = name
+        self.age = age
+    def __setattr__(self, key, value):
+        print(f"5.__setattr__ 被调用：设置{key}={value}")
+        # 数据校验：年龄不能为负数
+        if key=="age" and value<0:
+            raise ValueError("年龄不能为负数")
+        # 必须调用super()，否则无限递归
+        super().__setattr__(key,value)
+    # （4）__getattr__：访问不存在属性是兜底
+    def __getattr__(self, key):
+        print(f"4.__getattr__ 被调用：属性{key} 不存在")
+        # 必须抛出异常，否则无限递归
+        raise AttributeError(f"Student 对象没有属性：{key}")
+    # 6. __eq__：定义相等规则
+    def __eq__(self, other):
+        print("6. __eq__ 被调用：比较两个对象")
+        if not isinstance(other,Student):
+            return NotImplemented
+        return self.name == other.name and self.age == other.age
+    # 6.__hash__：配合__eq__使用，可保证哈希
+    def __hash__(self):
+        print("6.__hash__ 被调用：计算哈希值")
+        return hash((self.name, self.age))
+    # 7.__str__：面向用户展示
+    def __str__(self):
+        print("7.__str__ 被调用：print、str时触发")
+        return f"学生：{self.name},年龄{self.age}"
+    # 8.__repr__:面向开发者展示
+    def __repr__(self):
+        print("8.__repr__ 被调用：repr、交互式环境触发")
+        return f"Student(name='{self.name},age={self.age})')"
+    # 3.__del__：对象销毁
+    def __del__(self):
+        print(f"3.__del__ 被调用：{self.name}被销毁")
+# -----------------测试-------------
+print("====创建对象====")
+s1=Student("zs",20)
+s2=Student("zs",20)
+print("print 触发")
+print(s1)
+print("repr 触发")
+print(repr(s1))
+print("s1==s2 触发")
+print(s1==s2)
+print("hash + eq 触发")
+print(set([s1,s2]))
+print("getattr 触发")
+try:
+    s1.email
+except AttributeError as e:
+    print(f"捕获异常：{e}")
+print("del 触发")
+del s1
+del s2
+"""
+====创建对象====
+1.__new__被调用：准备创建对象
+2.__init__ 被调用：填充数据
+5.__setattr__ 被调用：设置name=zs
+5.__setattr__ 被调用：设置age=20
+1.__new__被调用：准备创建对象
+2.__init__ 被调用：填充数据
+5.__setattr__ 被调用：设置name=zs
+5.__setattr__ 被调用：设置age=20
+print 触发
+7.__str__ 被调用：print、str时触发
+学生：zs,年龄20
+repr 触发
+8.__repr__ 被调用：repr、交互式环境触发
+Student(name='zs,age=20)')
+s1==s2 触发
+6. __eq__ 被调用：比较两个对象
+True
+hash + eq 触发
+6.__hash__ 被调用：计算哈希值
+6.__hash__ 被调用：计算哈希值
+6. __eq__ 被调用：比较两个对象
+8.__repr__ 被调用：repr、交互式环境触发
+{Student(name='zs,age=20)')}
+getattr 触发
+4.__getattr__ 被调用：属性email 不存在
+捕获异常：Student 对象没有属性：email
+del 触发
+3.__del__ 被调用：zs被销毁
+3.__del__ 被调用：zs被销毁
+"""
+```
 
 #### 5. 类的操作
 
 - **成员引用（获取类的成员）**：`类名.成员名`
 - **实例化（创建类的对象）**：`实例名 = 类名(参数)`
+- 动态添加
+    - 动态的给实例添加属性【在实例方法中self.新属性=新属性值】
+    - 动态的给类添加方法【直接在外面类.新属性=新属性值】
+    - 动态给实例添加方法【在类外写函数，实例化的对象.方法名=函数名。对象.方法名()调用】
+    - 动态给实例添加方法【同上，实例化的对象=types.MethodType(函数名，实例)】
+    - 动态给类添加方法【类外定义函数（含装饰器），类.方法名=函数名。类.方法名()调用】
+- 动态删除
+    - 动态删除属性【del 实例化的对象.属性名】
+    - 动态删除方法【del 实例化的对象.方法名】
+- 限制添加实例属性于实例方法
+    - 类中`__slots__ = ("name", "age","eat")`限制
 
 #### 6. init：对象的创建过程
 
@@ -625,4 +889,132 @@ class 类名:
 ---
 
 *持续更新中，欢迎指点。*
+
+
+
+## 面向对象的三大特性
+
+#### 封装      *主要指的是成员的私有化*
+
+私有化：只能在类的内部访问成员，在类的外部成员就不能访问了
+
+实现方式：【原理：底层是通过改名实现私有化】
+
+​	_ 名			：只是一个约定，不具备强制性
+
+​	_ _名（或\_ _名\_）：在类的外部无法访问，只能在类中访问私有成员
+
+​	`	__name` 会被 Python 改写成 `_ClassName__name`，外部可以通过 `_ClassName__name` 访问，
+
+​	【这只是**保护机制**，不是**强制安全机制**。】
+
+一般写法：【@property ，@age.setter，一般方法命名： 私有属性去掉前面下划线】
+
+​	`def age(self):`添加修饰器@property，只读，直接age访问即可
+
+​	`def age(self, age):`添加修饰器@age.setter实现`self.__age = age`
+
+​	原本的`self.__age = age`直接`ls.age=20 设置。  print(ls.age)访问`
+
+​	 注意：【@property装饰的方法不要和变量重名，否则可能导致无限递归】
+
+#### 继承	*子类 is a 父类*
+
+​	单继承
+
+​		class 子类（父类）：
+
+​			类体
+
+​	多继承
+
+​		class 子类（父类1，父类2，父类3...）
+
+​			类体
+
+​	复用父类中的方法
+
+​		super（）. 方法（）
+
+​		父类 . 方法（）
+
+​	super()：不是简单的“调用父类”，而是基于方法解析顺序（MRO）调用当前类在MRO链的下一个类
+
+​	方法解析顺序：可使用类名.\_\_mro\_\_访问类的继承链来查看方法解析顺序
+
+```python
+MRO以及super结合使用【推荐写法】
+class A:
+    def __init__(self,a,**args):
+        self.a=a
+        super().__init__(**args)
+class B:
+    def __init__(self,b,**args):
+        self.b=b
+        super().__init__(**args)
+class C(A,B):
+    def __init__(self,a,b):
+        # 方法一：
+        # A.__init__(self,a)
+        # B.__init__(self,d)
+        # 方法二：
+        super().__init__(a=a,b=b)
+```
+
+​	按照ROM去执行【解决继承的钻石继承问题】
+
+```python
+#【解决继承的钻石问题】
+class Child(Parent1, Parent2):
+    def __init__(self):
+        super().__init__()
+```
+
+#### 多态
+
+​	同一变量在不同的场景下呈现不同状态
+
+​	使用场景
+
+​		在方法的参数中使用多态【函数/方法的参数不指定具体的类，而是指定一个“抽象类型”或“接口”。】
+
+​			eg：继承同一个类的不同子类，执行重写后的父类方法的效果不一致
+
+​		在返回值中使用多态【一个方法/函数返回的对象，不需要让调用者知道具体是什么类】
+
+​			eg：同一个函数（方法）的返回值，基于不同参数，返回值可能是不同类型（类/实例）
+
+​		在声明变量的时候使用多态【变量本身没有类型（Python 是动态类型语言），变量是一个标签，可以指向任何对象】
+
+​			eg：列表中存放不同的类，for遍历时，同一个引用指向不同的类
+
+#### 重写
+
+*【注意：Java中有重写还有重载，但是Python中只有重写，因为在内存中，如果方法名一致，只对应一个地址，所以指挥按照最后一个执行。Python **不直接支持传统重载**（同名方法参数不同），但可以通过**默认参数**和**可变参数**模拟重载效果。】*
+
+**在Python中实现重载，通过可变参数。**`eg: def eat(self，*args，\*\*args)`
+
+------
+
+*持续更新中，欢迎指点。*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
