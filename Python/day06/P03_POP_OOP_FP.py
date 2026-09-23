@@ -33,7 +33,7 @@ print(zsCalc.div(10,20))
 """
 
 """
-# FP 面向函数变成
+# FP 面向函数编程
 # 函数是第一公民 做什么
 def add(num1,num2):
     return num1+num2

@@ -19,7 +19,7 @@ file= open("test.txt","rt")
 # content=file.read()
 # read(size)    读取文件指定大小的内容
 #       如果编码方式是t,那么size表示字符数,
-#       如果编码是b,那么size表示读取的是字节数
+#       如果编码方式是b,那么size表示读取的是字节数
 # content=file.read(8)
 
 # readline  读取文件的一行数据
