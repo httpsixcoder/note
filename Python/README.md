@@ -19,13 +19,11 @@
 
 - [Day07：面向对象进阶（魔法方法）](#day07面向对象进阶魔法方法)
 
-    ······持续更新中······
-
 ---
 
 
 
-## Day01：环境搭建与基础入门
+# Day01：环境搭建与基础入门
 
 ### 1. Python 简介
 - **Python 的发展史**：由 Guido van Rossum（龟叔）于 1989 年圣诞节期间开发，1991 年发布第一个版本。
@@ -128,7 +126,7 @@ print("Hello, Atguigu!")
 
 
 
-## Day02：数据类型与基础语法
+# Day02：数据类型与基础语法
 
 ### 1. 数据类型（6 种）
 - **数值**：整数（`int`）、浮点数（`float`）、复数（`complex`）、布尔（`bool`）
@@ -199,7 +197,7 @@ y, m, d = map(int, str1.split(','))
 
 
 
-## Day03：流程控制与序列
+# Day03：流程控制与序列
 
 ### 1. 程序流程控制
 - **分支**：单分支（`if`）、双分支（`if...else`）、多分支（`if...elif...else`）。
@@ -298,7 +296,7 @@ list1 = [100, 200, 300, 400, 500]
 
 
 
-## Day04：字符串、元组、集合、字典与函数
+# Day04：字符串、元组、集合、字典与函数
 
 ### 1. 字符串（str）
 不可变、有序、存单个字符。
@@ -402,7 +400,7 @@ list1 = [100, 200, 300, 400, 500]
 
 
 
-## Day05：函数进阶（函数、闭包与作用域）
+# Day05：函数进阶（函数、闭包与作用域）
 
 ### 1. 函数基础
 带名字的代码块，用于复用。**必须先声明，后调用**。
@@ -492,6 +490,158 @@ func(x=10, y=20, z=30) #c = {'x': 10, 'y': 20, 'z': 30}
 
 ​		reduce（）对序列中的累积，返回的是具体的结果值，归约聚合
 
+### 9.高阶函数
+
+**接收函数作为参数，或者返回一个函数的函数**
+
+- #### `1.map(func, iterable, ...)`
+
+    **作用**：对可迭代对象中的每个元素，依次应用 `func`，返回一个**迭代器**（Python 3 中不再直接返回列表）。
+
+    **参数**：
+
+    ​	`func`：处理函数（可以是 lambda、普通函数、内置函数）。
+
+    ​	`iterable`：一个或多个可迭代对象（多个时，`func` 也要接收多个参数）。
+
+```python
+nums = [1, 2, 3, 4]
+# 单个可迭代对象
+result = list(map(lambda x: x ** 2, nums))
+print(result)  # [1, 4, 9, 16]
+# 多个可迭代对象
+a = [1, 2, 3]
+b = [10, 20, 30]
+result = list(map(lambda x, y: x + y, a, b))
+print(result)  # [11, 22, 33]
+# 配合内置函数（更简洁）
+str_nums = ["1", "2", "3"]
+result = list(map(int, str_nums))
+print(result)  # [1, 2, 3]
+```
+
+- #### `2.filter(func, iterable)`
+
+    **作用**：用 `func` 判断每个元素是否保留，返回一个**迭代器**，里面只包含使 `func` 返回 `True` 的元素。
+
+    **参数**：
+
+    ​	`func`：返回布尔值的判断函数（返回 None 时等价于过滤假值）。
+
+    ​	`iterable`：可迭代对象。
+
+```python
+nums = [-3, -1, 0, 1, 2, 3]
+# 保留正数
+result = list(filter(lambda x: x > 0, nums))
+print(result)  # [1, 2, 3]
+# 传入 None，过滤掉所有假值（0、""、None、[]、{} 等）
+mixed = [0, 1, "", "hello", None, [], [1, 2]]
+result = list(filter(None, mixed))
+print(result)  # [1, 'hello', [1, 2]]
+```
+
+#### 3.`reduce(func, iterable, initializer)`
+
+​	**作用**：对序列中的元素进行**累积操作**，把前一次的结果和下一个元素继续传给 `func`。**注意：Python 3 中 reduce 被移到了 functools 模块里。**
+
+​	**参数**：
+
+​		`func`：接收两个参数，返回一个值。
+
+​		`iterable`：可迭代对象。
+
+​		`initializer`（可选）：初始值。有初始值时，从初始值开始计算。
+
+**⚠️ 注意**：`reduce` 的可读性较差，很多公司代码规范里**不推荐过度使用**，除非聚合逻辑特别复杂。
+
+```python
+nums = [1, 2, 3, 4, 5]
+# 求和
+total = reduce(lambda x, y: x + y, nums)
+print(total)  # 15
+# 求乘积（带初始值）
+total = reduce(lambda x, y: x * y, nums, 10)
+print(total)  # 1200（从 10 开始乘）
+# 找最大值
+max_num = reduce(lambda x, y: x if x > y else y, nums)
+print(max_num)  # 5
+```
+
+#### 4. `sorted(iterable, key=None, reverse=False)`
+
+​	**作用**：对可迭代对象排序，返回**新的列表**（不修改原对象）。
+
+​	**参数**：
+
+​		`iterable`：可迭代对象。
+
+​		`key`：指定比较标准的函数（**核心！**）。
+
+​		`reverse`：`True` 表示降序。
+
+```python
+# 基本排序
+print(sorted([3, 1, 2]))  # [1, 2, 3]
+# 按字符串长度排序
+words = ["apple", "a", "banana", "cat"]
+print(sorted(words, key=len))  # ['a', 'cat', 'apple', 'banana']
+# 按对象属性排序
+students = [Student(...), ...]
+print(sorted(students, key=lambda s: s.score, reverse=True))
+# 多级排序（元组）
+print(sorted(students, key=lambda s: (s.grade, -s.score)))
+# 先按年级升序，年级相同时按分数降序
+```
+
+#### 5. `max(iterable, key=None, default=None)` / `min(...)`
+
+​	**作用**：找最大/最小值。
+
+​	**参数**：
+
+​		`iterable`：可迭代对象。
+
+​		`key`：指定比较标准的函数。
+
+​		`default`：序列为空时的返回值（防止报错）。
+
+```python
+students = [Student(...), ...]
+# 找分数最高的学生（返回学生对象）
+top = max(students, key=lambda s: s.score)
+# 找分数最低的
+low = min(students, key=lambda s: s.score)
+# 空列表防报错
+top = max([], key=lambda s: s.score, default=None)
+```
+
+#### 6. `functools.partial(func, *args, **kwargs)`
+
+**作用**：**冻结**函数的部分参数，返回一个新的函数。常用于“参数固定”场景。
+
+**推荐场景**：
+
+- 回调和事件处理中，需要固定部分参数。
+- 大模型开发中，把 API 的固定参数（如 `model="gpt-4"`）预先绑定。
+
+```python
+from functools import partial
+
+def power(base, exponent):
+    return base ** exponent
+
+# 固定 exponent=2，创建一个"平方函数"
+square = partial(power, exponent=2)
+print(square(5))  # 25
+
+# 固定 base=2，创建一个"2的n次方函数"
+power_of_two = partial(power, 2)
+print(power_of_two(10))  # 1024
+```
+
+
+
 ### 9.函数注释	func.\_\_annotations\_\_ 查看
 
 ```python
@@ -520,7 +670,7 @@ help(print_info)
 
 
 
-## Day06：文件操作
+# Day06：文件操作
 
 ### 文件基本概念
 
@@ -657,7 +807,7 @@ for root, dirs, files in os.walk(os.getcwd()):
 
 
 
-## Day07：面向对象（OOP）
+# Day07：面向对象（OOP）
 
 - POP 面向过程，以步骤/过程为中心 怎么做
 - OOP 面向对象，万物皆对象 谁来做
@@ -853,9 +1003,9 @@ del 触发
 - **实例化（创建类的对象）**：`实例名 = 类名(参数)`
 - 动态添加
     - 动态的给实例添加属性【在实例方法中self.新属性=新属性值】
-    - 动态的给类添加方法【直接在外面类.新属性=新属性值】
+    - 动态的给类添加属性【直接在外面类.新属性=新属性值】
     - 动态给实例添加方法【在类外写函数，实例化的对象.方法名=函数名。对象.方法名()调用】
-    - 动态给实例添加方法【同上，实例化的对象=types.MethodType(函数名，实例)】
+    - 动态给实例添加方法【实例化的对象.方法名=types.MethodType(函数名，实例)】【最标准、最推荐】
     - 动态给类添加方法【类外定义函数（含装饰器），类.方法名=函数名。类.方法名()调用】
 - 动态删除
     - 动态删除属性【del 实例化的对象.属性名】
@@ -917,6 +1067,17 @@ del 触发
 ​	原本的`self.__age = age`直接`ls.age=20 设置。  print(ls.age)访问`
 
 ​	 注意：【@property装饰的方法不要和变量重名，否则可能导致无限递归】
+
+```python
+class Person:
+    __age=0
+@property
+def age(self):
+    return self.__age
+@age.setter
+def xxx(self,new_age):
+    self.__age=new_age
+```
 
 #### 继承	*子类 is a 父类*
 
@@ -997,6 +1158,10 @@ class Child(Parent1, Parent2):
 ------
 
 *持续更新中，欢迎指点。*
+
+
+
+# Day08：异常及其异常处理
 
 
 
