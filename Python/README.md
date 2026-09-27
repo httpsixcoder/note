@@ -6,18 +6,13 @@
 
 ## 📖 目录
 - [Day01：环境搭建与基础入门](#day01环境搭建与基础入门)
-
 - [Day02：数据类型与基础语法](#day02数据类型与基础语法)
-
 - [Day03：流程控制与序列](#day03流程控制与序列)
-
 - [Day04：字符串、元组、集合、字典与函数](#day04字符串元组集合字典与函数)
-
 - [Day05：函数进阶（函数、闭包与作用域）](#day05函数进阶函数闭包与作用域)
-
 - [Day06：文件操作与面向对象基础](#day06文件操作与面向对象基础)
-
 - [Day07：面向对象进阶（魔法方法）](#day07面向对象进阶魔法方法)
+- [Day08：异常及其异常处理](#day08异常及其异常处理)
 
 ---
 
@@ -856,13 +851,16 @@ print(Person.__doc__) #打印类的说明文档
     - 类中定义。
     - 第一个参数是 `self`，代表实例本身。
     - 通过 `实例名.方法名()` 访问。
+
 - **类方法**：
     - 通过 `@classmethod` 修饰。
     - 第一个参数是 `cls`，代表当前类。
     - 不需要实例化，直接通过 `类名.方法名()` 访问。
+
 - **静态方法**：
     - 通过 `@staticmethod` 修饰。
     - 不需要实例化，直接通过 `类名.方法名()` 访问。无需传递 `self` 或 `cls`。
+
 - **魔法方法**：
     - 格式 `__xxx__`（双前下划线、双后下划线）。这类方法不需要手动调用，执行特定操作时会自动触发。
     - `def __new__(cls, *args, **kwargs)`
@@ -893,6 +891,15 @@ print(Person.__doc__) #打印类的说明文档
         - `__new__` 要 `return super().__new__(cls)`，不然 `__init__ `罢工。
         - `__getattr__` 里要 `raise AttributeError，__setattr__` 里要` super().__setattr`__，不然无限递归。
         - 重写 `__eq__ `必须重写 `__hash__`，不然对象不能进 set 和 dict。
+        - **面试：`__str__` 和 `__repr__` 的区别是什么？**
+
+    它们的设计目标不同：
+
+    `__str__` 面向终端用户，追求友好易读，由 `print`、`str` 触发。
+
+    `__repr__` 面向开发者，追求精确无歧义，由 `repr`、交互式环境、以及列表/字典打印时触发。
+
+    工程中如果只允许写一个，我会推荐写 `__repr__`。因为 `print` 在找不到 `__str__` 时会自动回退到 `__repr__`，反之则不成立。而且 `__repr__` 的理想标准是返回能通过 `eval()` 重建对象的字符串
 
 ```python
 """
@@ -1163,22 +1170,208 @@ class Child(Parent1, Parent2):
 
 # Day08：异常及其异常处理
 
+### 1. 程序常见的问题
+
+- **语法错误**：程序在语法解析阶段就发现问题，程序不会执行。
+- **异常**：程序语法正确，但运行时发生错误。运行期间检测到的错误被称为异常。
+
+**区别**：语法错误在编译/解释阶段就被拦截，异常是在运行时才暴露。
+
+### 2. 异常处理
+
+**目的**：不是规避异常，而是当异常发生时提供处理方法，让程序不终止，继续向下执行。
+
+**如果不处理异常**：默认将异常打印到控制台，程序终止，异常后面的代码不执行。
+
+#### 基本语法
+
+```python
+try:
+    # 可能发生异常的代码
+except:
+    # 发生异常时，对异常进行处理的代码
+```
+
+**底层原理**：
+1. 程序运行时如果发生异常，底层会**创建一个对应的异常类型对象**。
+2. 这个异常对象会**向上抛出（raise）**。
+3. 当调用者接收到异常后，通过 `except` 代码块对异常对象进行**捕获**并处理。
+4. 如果没有被 `except` 捕获，继续向上抛出，直到交给解释器。
+5. 解释器默认在控制台打印异常信息，程序终止。
+
+#### 针对不同类型的异常进行处理
+
+```python
+try:
+    # 可能发生异常的代码块
+except 异常类型1 as 别名:
+    # 处理方式1
+except 异常类型2 as 别名:
+    # 处理方式2
+except (异常类型3, 异常类型4, 异常类型5) as 别名:
+    # 处理方式3
+except:
+    # 兜底处理【相当于 if-else 中的 else】
+```
+
+#### else 语句块【可选】
+
+`try` 中**没有发生异常**时，执行 `else` 中的代码。
+
+```python
+try:
+    # 可能发生异常的代码
+except 异常类型1 as 别名:
+    # 处理方式1
+else:
+    # try 中没发生异常，执行 else 代码
+```
+
+**说明**：`else` 中的代码放 `try` 里效果一样，但 `else` 语义更清晰——“只有成功执行才走这里”。
+
+#### finally 语句块【资源释放】
+
+**不管是否发生异常都执行**。通常把资源释放（关闭文件、断开连接）放在里面。
+
+```python
+try:
+    # 可能发生异常的代码
+except 异常类型1 as 别名:
+    # 处理方式1
+else:
+    # try 中没发生异常，执行 else 代码
+finally:
+    # 不管是否发生异常都执行
+```
+
+- 【大部分和else一样，**但是except没有捕获异常，则finally会被执行，而代码块外面的不会被执行**】
+- **面试：函数体里面try中执行return后，依旧执行finally里面的代码**
+
+### 3. 抛出异常
+
+**`raise` 抛出异常**：
+```python
+raise 异常类型("异常信息")
+```
+
+**`assert` 抛出异常**（断言）：
+```python
+assert 表达式, "异常信息"
+# 等价于：
+if not 表达式:
+    raise AssertionError("异常信息")
+```
+
+**使用场景**：
+- `raise`：主动抛出异常，用于校验参数、中断流程。
+- `assert`：用于调试阶段的断言，生产环境会被优化掉（`python -O` 运行时）。
+
+### 4. 自定义异常
+
+```python
+class 自定义异常类型(Exception):
+    pass
+```
+
+### 5. 异常的传递
+
+- try嵌套或者函数的嵌套定义——一层一层向外传递
+- 如果存在函数的嵌套调用——沿着函数的调用方向反向传递
+
+### 6. with 语句与上下文管理器
+
+#### 语法
+
+```python
+with expression as variable:
+    # 代码块
+```
+
+#### 说明
+
+- `with`、`as`：关键字。
+- `expression`：是一个对象或函数调用，返回的内容类型必须是**上下文管理器对象**。
+- **上下文管理器中必须提供两个方法**：`__enter__` 和 `__exit__`。
+- `variable`：可选，用于存储 `expression` 对象的 `__enter__` 方法的返回值。
+
+#### 执行原理
+
+1. 执行 `with` 语句时，调用 `expression.__enter__()`。
+2. `__enter__` 的返回值被存储在 `variable` 中（如果有），以供 `with` 代码块使用。
+3. `__enter__` 的返回值一般是 `self`（当前上下文管理器对象）。
+4. 执行 `with` 语句中的内容。
+5. 当代码执行完毕后，**不管是否发生异常**，都会执行上下文管理器对象中的 `__exit__` 方法，在 `__exit__` 方法中将资源释放掉。
+
+#### 扩展：
+
+#### `__exit__` 的三个参数
+
+```python
+def __exit__(self, exc_type, exc_val, exc_tb):
+    # exc_type：异常类型，正常退出为 None
+    # exc_val：异常实例，正常退出为 None
+    # exc_tb：异常 traceback 对象，正常退出为 None
+    # 返回 True：吞掉异常；返回 False 或 None：异常继续抛出
+    pass
+```
+
+#### 自定义上下文管理器示例
+
+```python
+class Timer:
+    def __enter__(self):
+        import time
+        self.start = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        import time
+        print(f"耗时：{time.time() - self.start:.4f} 秒")
+        return False
 
 
+with Timer() as t:
+    total = sum(range(10000000))
+```
+
+#### 使用 `contextlib` 简化写法
+
+```python
+from contextlib import contextmanager
 
 
+@contextmanager
+def timer():
+    import time
+    start = time.time()
+    try:
+        yield    # yield 之前 = __enter__，之后 = __exit__
+    finally:
+        print(f"耗时：{time.time() - start:.4f} 秒")
 
 
+with timer():
+    total = sum(range(10000000))
+```
 
+### 7. 常见异常类型速查
 
+| 异常类型            | 触发场景         |
+| :------------------ | :--------------- |
+| `SyntaxError`       | 语法错误         |
+| `NameError`         | 使用未定义的变量 |
+| `TypeError`         | 类型不匹配       |
+| `ValueError`        | 值不合法         |
+| `IndexError`        | 索引越界         |
+| `KeyError`          | 字典键不存在     |
+| `AttributeError`    | 属性不存在       |
+| `ZeroDivisionError` | 除以零           |
+| `FileNotFoundError` | 文件不存在       |
+| `ImportError`       | 导入模块失败     |
+| `AssertionError`    | assert 断言失败  |
 
-
-
-
-
-
-
-
+------
+*持续更新中，欢迎指点。*
 
 
 
