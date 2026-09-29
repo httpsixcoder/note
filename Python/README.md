@@ -13,6 +13,7 @@
 - [Day06：文件操作与面向对象基础](#day06文件操作与面向对象基础)
 - [Day07：面向对象进阶（魔法方法）](#day07面向对象进阶魔法方法)
 - [Day08：异常及其异常处理](#day08异常及其异常处理)
+- [Day09：模块与包](#day09模块与包)
 
 ---
 
@@ -1162,6 +1163,28 @@ class Child(Parent1, Parent2):
 
 **在Python中实现重载，通过可变参数。**`eg: def eat(self，*args，\*\*args)`
 
+#### 抽象
+
+定义：如果类中存在抽象方法，那么这个类就是抽象类，需要让这个类继承ABC
+
+抽象方法：只需要声明这个方法，但是方法的具体实现不能完成，方法上加注@abstractmethod
+
+注意：抽象类不能被实例化，如果子类继承了抽象父类，必须对抽象类中的父类方法进行实现，如果没有实现，那么子类也属于抽象类，不能被实例化
+
+```python
+from abc import ABC, abstractmethod
+class Shape(ABC):
+    @abstractmethod
+    def area(self):
+        pass
+class Rectangle(Shape):
+    def __init__(self, length, width):
+        self.length = length
+        self.width = width
+    def area(self):
+        return self.length * self.width
+```
+
 ------
 
 *持续更新中，欢迎指点。*
@@ -1375,4 +1398,207 @@ with timer():
 
 
 
+# Day09：模块与包
 
+### 1.模块的导入：一个以 .py 结尾的源文件就是一个模块
+
+- #### 全局导入：导入模块的所有成员
+
+    ​	语法：import 模块名 [as 别名]
+
+    ​	使用方式：模块名.成员名    或者    别名.成员名
+
+- #### 局部导入：
+
+    ​	方式1：导入模块的指定成员
+
+​			语法：from 模块名 import 成员1 as 别名，成员2 as 别名，成员3 as 别名
+
+​			使用方式：直接通过成员名或者别名访问
+
+​		方式2：导入模块所有不以单下划线开头的成员
+
+​			语法：from 模块名 import *
+
+​			使用方式：直接通过成员名访问
+
+​			【在被导入的模块中，通过`__all__`可设置哪些成员可以被导入，仅在form  import *下有作用】
+
+- #### 模块搜索顺序：当导入一个模块时候，按照以下顺序查找
+
+​		1.当前目录
+
+​		2.PYTHONPATH环境变量中的目录
+
+​		3.包含Python模块以及这些模块所依赖的任何extension module 的目录
+
+```python
+import sys
+print(sys.path) 			   #通过这种方式查看模块搜索顺序
+sys.path.append("目标目录")		#通过这种方式添加临时目录
+```
+
+- #### **`__name__`是python中内置的特殊变量【常作测试使用】**
+
+​		当文件被直接运行时，`__name__`的值为`__main__`
+
+​		当文件作为模块被导入时，`__name__`的值为该模块的名字
+
+- #### dir(x)函数：打印x所有成员，x为空则打印当前作用域中所有成员【变量，函数，类】
+
+### 2.包的导入【包：文件夹下有一个`__init__.py`文件】
+
+- #### 全局导入：导入包中模块的所有成员
+
+​		语法：import 包名.模块名 [as 别名]
+
+​		使用方式：包名.模块名.成员名 或者 别名.成员名
+
+​		注意：如果import最后一个是包 import 包a.包b ，那么在被导入的包对应的`__init__.py`文件中必须指定导入包下的哪个模块
+
+- #### 局部导入
+
+​		方式一：从包中导入模块
+
+​			语法：from 包名 import 模块名 [as 别名]
+
+​			使用方式：模块名.成员名
+
+​		方式二：从包中模块导入功能
+
+​			语法：from 包名.模块名 import 成员1 [as 别名]，成员2 [as 别名]
+
+​			使用方法：成员名或者别名
+
+​		方式三：从包中导入指定模块
+
+​			语法1：导入模块所有成员--和普通的模块导入一样【from 包名.模块名 import *】
+
+​			语法1：导入包下的模块【from 包名 import *  **注意：必须在`__init__.py`指定导入哪些模块**】
+
+### 3.标准库：下载Python自带
+
+### 4.第三方库（pip）
+
+#### 	打包自己的库并安装
+
+​		1.先安装 setuptools 库
+
+​		2.在包外【和包平级】创建一个 setup.py 文件
+
+```python
+from distutils.core import setup
+
+setup(
+    name="graphic",  # 需要打包的名字
+    version="1.0",  # 版本
+    py_modules=["graphic.circle", "graphic.rectangle"],  # 需要打包的模块
+)
+```
+
+​		3.在 setup.py 同级目录下进行构建【同级cmd】 执行  **`python setup.py build`**
+
+​		4.生成压缩包  **`python setup.py sdist`**
+
+​		5.pip命令安装自己打的库
+
+```
+【命令行】pip install path_to_your_package/dist/your_package_name-0.1.tar.gz
+```
+
+​		6.Pycharm安装自己打的包库
+
+### 5.Python高级语法
+
+#### 	浅拷贝深拷贝：
+
+​		浅拷贝：切片，工厂函数（list()，set()）,copy()函数
+
+​		深拷贝：copy.deepcopy()
+
+​		注意：
+
+​			非容器类（数字，字符串，和其他“原子”类型的对象）无法拷贝
+
+​			元组变量如果只包含原子类型对象，不能对其拷贝
+
+​			元组不光包含不可变数据类型，还包含可变数据类型，不能对其进行浅拷贝
+
+​			元组不光包含不可变数据类型，还包含可变数据类型，能对其进行深拷贝
+
+#### 	迭代器：
+
+​		相关概念：
+
+​			遍历：将数据一个一个取出来
+
+​			循环：遍历的一种实现方式
+
+​			迭代：遍历的一种实现方式，for循环底层就是迭代器【调用next函数，将数据一个一个取出来】
+
+- 能用for遍历的都是可迭代器对象：属于Iterable【list，tuple，set，dict，str，generator(range(n)）】 
+
+
+- 可迭代对象： 有`__iter__()`，调用iter(对象)，底层自动调用`__iter__()`魔法方法，获取当前对象迭代器
+
+
+- 迭代器：有`__next__()`，调用next(对象)，底层自动调用`__next__()`这个魔法方法，获取下一个值
+
+    ​	手动实现迭代器：
+
+```python
+# 手动实现迭代器
+class my_list_iterator:
+    def __init__(self,lst):
+        self.lst=lst
+        self.index=0
+    def __next__(self):
+        if self.index==len(self.lst):
+            raise StopIteration
+        res=self.lst[self.index]
+        self.index+=1
+        return res
+class my_list:
+    def __init__(self,data):
+        self.data=data
+    def __iter__(self):
+        return my_list_iterator(self.data)
+for i in ml:
+print(i)
+```
+
+------
+
+*持续更新中，欢迎指点。*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+​	
