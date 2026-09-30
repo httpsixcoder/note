@@ -1478,6 +1478,73 @@ sys.path.append("目标目录")		#通过这种方式添加临时目录
 
 ### 3.标准库：下载Python自带
 
+​	`collections` 模块：容器数据类型
+
+​		1.`defaultdict` —— 带默认值的字典
+
+```python
+from collections import defaultdict
+
+d = {}
+
+# defaultdict：指定默认值工厂
+dd = defaultdict(int)    # 默认值为 0
+dd["a"] += 1
+print(dd)   				# defaultdict(<class 'int'>, {'a': 1})
+dd2 = defaultdict(list)  # 默认值为 []
+dd2["b"].append(1)
+print(dd2)  				# defaultdict(<class 'list'>, {'b': [1]})
+dd3 = defaultdict(set)   # 默认值为 set()
+dd3["c"].add(1)
+print(dd3)  				# defaultdict(<class 'set'>, {'c': {1}})
+```
+
+​		**常用场景**：
+
+​			统计频率：`defaultdict(int)`
+
+​			分组：`defaultdict(list)`
+
+​			去重分组：`defaultdict(set)`
+
+​		2.`Counter` —— 计数器【统计可哈希对象的出现次数。】
+
+```python
+from collections import Counter
+# 从字符串统计字符频率
+char_count = Counter("abracadabra")
+print(char_count)
+# Counter({'a': 5, 'b': 2, 'r': 2, 'c': 1, 'd': 1})
+# 最常见的 1 个
+print(char_count.most_common(1))   # [('a', 5)]
+# 最常见的 3 个
+print(char_count.most_common(3))   # [('a', 5), ('b', 2), ('r', 2)]
+
+# 从列表统计
+nums = [1, 2, 2, 3, 3, 3]
+num_count = Counter(nums)
+print(num_count)   # Counter({3: 3, 2: 2, 1: 1})
+# 更新：增加新元素
+num_count.update([2, 3, 3, 3])
+print(num_count)   # Counter({3: 6, 2: 3, 1: 1})
+# 减法
+c = Counter(a=3, b=1)
+d = Counter(a=1, b=2)
+print(c - d)       # Counter({'a': 2})
+```
+
+​		常用方法：
+
+​			most_common(n)	返回出现次数最多的 n 个元素 
+
+​			update(iterable)	增加计数 
+
+​			subtract(iterable)	减少计数 
+
+​			elements()	返回元素迭代器（按计数重复）
+
+​			 total()	返回所有计数值之和
+
 ### 4.第三方库（pip）
 
 #### 	打包自己的库并安装
@@ -1487,8 +1554,10 @@ sys.path.append("目标目录")		#通过这种方式添加临时目录
 ​		2.在包外【和包平级】创建一个 setup.py 文件
 
 ```python
-from distutils.core import setup
-
+# 老版本
+# from distutils.core import setup
+# 新版本
+from setuptools import setup
 setup(
     name="graphic",  # 需要打包的名字
     version="1.0",  # 版本
@@ -1496,9 +1565,9 @@ setup(
 )
 ```
 
-​		3.在 setup.py 同级目录下进行构建【同级cmd】 执行  **`python setup.py build`**
+​		3.在 setup.py 同级目录下进行构建【同级cmd】 执行  **`python setup.py build`**【校验能否打包】
 
-​		4.生成压缩包  **`python setup.py sdist`**
+​		4.生成压缩包  **`python setup.py sdist`**【真正打包】
 
 ​		5.pip命令安装自己打的库
 
@@ -1507,6 +1576,17 @@ setup(
 ```
 
 ​		6.Pycharm安装自己打的包库
+
+​	**注意：3-5步骤是旧版本，新版本：**
+
+​		1.在 setup.py 同级目录下，pip install build
+
+​		2.python -m build【**一句话替代 build 和 sdist**】
+
+- **vehicle-1.0.tar.gz**：源码分发包（Source Distribution）。里面是 `.py` 代码，别人安装时需要在自己的电脑上重新编译打包。
+- **vehicle-1.0-py3-none-any.whl**：轮子包（Wheel）。它已经被预先构建好了（你截图里刚执行的 build 过程），安装速度极快。**推荐以后优先使用 .whl 文件**
+
+3.pip install .\dist\vehicle-1.0-py3-none-any.whl
 
 ### 5.Python高级语法
 
@@ -1573,32 +1653,56 @@ print(i)
 
 
 
+# Day10：
 
+### 1.生成器：（generator）是一个用于创建迭代器的简单而又强大的工具
 
+#### 	1.创建生成器对象的方式
 
+​		1.推导式：generator = （x for x in range（5））
 
+​		2.生成器函数：和普通函数的区别是，普通函数返回通过return，生成器函数返回值，通过yield
 
+​		注意：当在生成器函数中使用 yield 语句时，函数的执行将会暂停，并将 yield 后的表达式作为当前迭代的值返回。每次调用生成器的 next() 方法或者使用 for 循环进行迭代时，函数会从上次暂停的地方继续执行（会记住上次执行语句时素有的数据值），知道再次遇到 yield 语句
 
+#### 	2.生成器函数的优势是它们可以按需生成值，避免一次性生成大量数据并占用大量内存 
 
+#### 	3.next和send对比：
 
+##### 		next（）：
 
+​			启动生成器，获取值
 
+​			从上一次暂停的位置恢复执行，获取值
 
+##### 		send（）：
 
+​			启动生成器，获取值
 
+​			从上一次暂停的位置恢复执行，获取值，并向生成器”发生“一个值
 
+​		注意：如果使用send启动生成器，参数必须传None，引因为这个时候还没有yield
 
+### 2.命名空间（存放 “变量名-对象” 映射关系的容器）【带唯一索引的字典】
 
+​	三大核心命名空间：
 
+​		1.内置名称的命名空间
 
+​		2.模块的全局命名空间
 
+​		3.函数的局部命名空间
 
+​	其他命名空间：
 
+​		1.类命名空间
 
+​		2.实例命名空间
 
+​		3.嵌套命名空间
 
+​		4.包命名空间
 
+### 3.作用域
 
-
-
-​	
+​	搜索顺序：局部（Local）->嵌套（Enclosing）->全局（Global0->内嵌（Builtin）【LEGB】
