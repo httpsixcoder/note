@@ -14,6 +14,8 @@
 - [Day07：面向对象进阶（魔法方法）](#day07面向对象进阶魔法方法)
 - [Day08：异常及其异常处理](#day08异常及其异常处理)
 - [Day09：模块与包](#day09模块与包)
+- [Day10：Python高级语法](#day10Python高级语法)
+- [Day11：进程与线程](#day11进程与线程)
 - [附录：Pychram快捷键]()
 
 ---
@@ -491,15 +493,15 @@ func(x=10, y=20, z=30) #c = {'x': 10, 'y': 20, 'z': 30}
 
 **接收函数作为参数，或者返回一个函数的函数**
 
-- #### `1.map(func, iterable, ...)`
+#### `1.map(func, iterable, ...)`
 
-    **作用**：对可迭代对象中的每个元素，依次应用 `func`，返回一个**迭代器**（Python 3 中不再直接返回列表）。
+**作用**：对可迭代对象中的每个元素，依次应用 `func`，返回一个**迭代器**（Python 3 中不再直接返回列表）。
 
-    **参数**：
+**参数**：
 
-    ​	`func`：处理函数（可以是 lambda、普通函数、内置函数）。
+​	`func`：处理函数（可以是 lambda、普通函数、内置函数）。
 
-    ​	`iterable`：一个或多个可迭代对象（多个时，`func` 也要接收多个参数）。
+​	`iterable`：一个或多个可迭代对象（多个时，`func` 也要接收多个参数）。
 
 ```python
 nums = [1, 2, 3, 4]
@@ -517,15 +519,15 @@ result = list(map(int, str_nums))
 print(result)  # [1, 2, 3]
 ```
 
-- #### `2.filter(func, iterable)`
+#### `2.filter(func, iterable)`
 
-    **作用**：用 `func` 判断每个元素是否保留，返回一个**迭代器**，里面只包含使 `func` 返回 `True` 的元素。
+**作用**：用 `func` 判断每个元素是否保留，返回一个**迭代器**，里面只包含使 `func` 返回 `True` 的元素。
 
-    **参数**：
+**参数**：
 
-    ​	`func`：返回布尔值的判断函数（返回 None 时等价于过滤假值）。
+​	`func`：返回布尔值的判断函数（返回 None 时等价于过滤假值）。
 
-    ​	`iterable`：可迭代对象。
+​	`iterable`：可迭代对象。
 
 ```python
 nums = [-3, -1, 0, 1, 2, 3]
@@ -1591,7 +1593,7 @@ setup(
 
 ### 5.Python高级语法
 
-#### 	浅拷贝深拷贝：
+#### 	1.浅拷贝深拷贝：
 
 ​		浅拷贝：切片，工厂函数（list()，set()）,copy()函数
 
@@ -1607,7 +1609,7 @@ setup(
 
 ​			元组不光包含不可变数据类型，还包含可变数据类型，能对其进行深拷贝
 
-#### 	迭代器：
+#### 	2.迭代器：
 
 ​		相关概念：
 
@@ -1629,23 +1631,21 @@ setup(
 
 ```python
 # 手动实现迭代器
-class my_list_iterator:
+class MyIterator:
     def __init__(self,lst):
         self.lst=lst
         self.index=0
+    def __iter__(self):
+        return self
     def __next__(self):
-        if self.index==len(self.lst):
+        if self.index>=len(self.lst):
             raise StopIteration
         res=self.lst[self.index]
         self.index+=1
         return res
-class my_list:
-    def __init__(self,data):
-        self.data=data
-    def __iter__(self):
-        return my_list_iterator(self.data)
-for i in ml:
-print(i)
+it = MyIterator([1, 2, 3])   
+for x in it:
+    print(x)
 ```
 
 ------
@@ -1654,7 +1654,7 @@ print(i)
 
 
 
-# Day10：
+# Day10：Python高级语法
 
 ### 1.生成器：（generator）
 
@@ -1685,6 +1685,19 @@ print(i)
 ​			从上一次暂停的位置恢复执行，获取值，并向生成器”发生“一个值
 
 ​		注意：如果使用send启动生成器，参数必须传None，引因为这个时候还没有yield
+
+```python
+def generator_demo():
+    print("开始")
+    for i in range(3):
+        print(f"准备生成 {i}")
+        yield i
+        print(f"继续执行，准备下一次")
+    print("结束")
+gen = generator_demo()
+for x in gen:
+    print(f"收到: {x}")
+```
 
 ### 2.命名空间（Namespace）
 
@@ -1789,6 +1802,318 @@ print(func(-9))
 ​			obj() 是 obj.\_\_call\_\_() 的语法糖。
 
 ​			在被装饰函数上面写@类名，是类装饰器的语法糖
+
+------
+
+*持续更新中，欢迎指点。*
+
+
+
+# Day11：进程与线程
+
+### 1.并发并行
+
+​	并发：**交替执行**，同一时间段内处理多个任务【单核CPU就可以】**并发是逻辑概念**
+
+​	并行：**同时执行**，同一时刻真正一起运行【必须多核CPU】**并行是物理概念**
+
+​	Python 有个 **GIL（全局解释器锁）**，导致**一个进程内同一时刻只有一个线程在跑**。
+
+​		想并发：用多线程、协程（适合 I/O 密集）。 
+
+​		想并行：必须用多进程（绕过 GIL，适合 CPU 密集）。
+
+​	同步：**按顺序执行******，上一个做完才做下一个
+
+​	异步：**任务不等待**，继续做别的事，**适合 I/O 密集（网络请求、读写文件），尤其是大模型 API 调用**
+
+### 2.进程与线程
+
+#### 		1.进程（分配内存资源）
+
+​		进程是操作系统进行资源分配的基本单位
+
+​		操作系统中一个正在运行的程序或者软件就是一个进程
+
+​		每个进程都有自己独立的一块空间
+
+​		一个进程崩溃后，在保护模式下不会对其他进程产生影响
+
+​		多线程是指在操作系统中同时运行多个程序		
+
+##### 			1.使用`multiprocessing.Process`创建进程
+
+​	Unix/Linux操作系统提供一个 os.fork() 系统调用，调用一次返回两次，系统自动把当前进程（父进程）复制一个进程（子进程），分别在父进程和子进程内返回。
+
+​	windows中没有 fork() 调用，Python提供跨平台多进程模块 multiprocessing。multiprocessing 模块提供一个 Process 类来代表一个进程对象。Windows 用 `spawn` 创建子进程，不加保护会无限递归。
+
+```python
+multiprocessing.Process(group=None,target=None,name=None,args=(),kwargs={},*,daemon=None)
+```
+
+| 参数     | 作用                                                         |
+| -------- | ------------------------------------------------------------ |
+| group    | 永远传 `None`，为了和 `threading.Thread`（线程） 兼容。完全不用管 |
+| `target` | 核心参数，由run() 方法来发起调用的可调用对象，默认None       |
+| `name`   | 进程名字，默认None。不传默认叫 `Process-1`、`Process-2`。    |
+| `args`   | 参数元组。传给 `target` 的参数                               |
+| `kwargs` | 关键字参数字典。传给 `target` 的参数                         |
+| `daemon` | 是否为守护进程`True` 表示主进程结束时子进程强制退出，`False` 表示等子进程执行完 |
+
+​	Process 的属性和方法与其他常用方法
+
+| 属性                | 作用                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| `p.pid`             | 获取进程ID（号）                                             |
+| `p.name`            | 获取进程名称                                                 |
+| `p.daemon`          | 判断或者是否守护进程**，必须在 start() 之前设置              |
+| `p.exitcode`        | 获取子进程的退出码<br />None`（未结束）、`0`（正常）、负数（被信号终止，如 `-15` 是 SIGTERM） |
+| **方法**            | **作用**                                                     |
+| `p.start()`         | 启动子进程，传入target对象，只能被调用一次                   |
+| `p.join([timeout])` | 阻塞主进程，主进程等待子进程结束，timeout为曹氏多少秒后主进程继续执行 |
+| `p.run()`           | 默认调用传入target对象，如果子类化了Process，可以重写方法自定义行为 |
+| `p.is_alive()`      | 判断子进程是否存活                                           |
+| `p.terminate()`     | **强制终止**子进程                                           |
+| `p.kill()`          | **强制杀掉**子进程，更彻底                                   |
+| `p.close()`         | 关闭进程对象，释放资源，**必须在 join() 或 terminate() 之后调用** |
+| `os.getpid()`       | 获取当前进程编号                                             |
+| `os.getppid()`      | 获取当前进程的父进程编号                                     |
+
+```python
+import multiprocessing
+import time
+def write_file():
+    print(f"write_file{__name__}")
+    with open('./file.txt', 'w') as f:
+        while True:
+            f.write('hello world\n')
+            # 文件写入时，数据先进入内存缓冲区，缓冲区满了才会真正写到硬盘。
+            # 如果写进程不调用 f.flush()，读进程可能很长时间读不到新数据（因为数据还在内存里）。
+            # f.flush() 强制将缓冲区数据立刻写入硬盘，让读进程能立刻读取到。
+            f.flush()
+            time.sleep(0.5)
+def read_file():
+    print(f"read_file{__name__}")
+    with open('./file.txt', 'r') as f:
+        while True:
+            time.sleep(0.5)
+            content = f.read()
+            print(content)
+p1=multiprocessing.Process(target=write_file)
+p2=multiprocessing.Process(target=read_file)
+# if __name__ == '__main__': 的必要性（重中之重！）
+# 在 Windows 下，Python 创建新进程是通过重新导入当前模块来实现的。
+# 如果不在 if __name__ == '__main__': 里调用 start()，那么新进程在导入模块时，
+# 又会执行到 p1.start()，从而无限递归创建新进程，直接导致系统卡死或报 RuntimeError。
+if __name__=='__main__':
+    print(f"主进程{__name__}")
+    p1.start()
+    p2.start()
+    print("end")
+```
+
+##### 		2.自定义 Process 子类创建进程
+
+```python
+import os
+from multiprocessing import Process
+class Worker(Process):
+    # start()做的事：创建子进程 → 在子进程中调用run()
+    def run(self): #start->run->target
+        print(f"进程号是：{os.getpid()}，父进程号是{os.getppid()}")
+if __name__ == '__main__':
+    print(f"进程号是：{os.getpid()}，父进程号是{os.getppid()}")
+    w1=Worker()
+    w2=Worker()
+    # 如果你手动调用 w1.run()，它只是在当前进程执行 run() 里的代码，根本不会创建新进程。
+    w1.start()
+    w2.start()
+```
+
+##### 		3.创建进程池
+
+`multiprocessing.Pool([processes[,initializer[,initargs[,maxtasksperchild[,context]]]]])`
+
+###### 			1.进程池的创建
+
+| 参数               | 作用                                                         |
+| ------------------ | ------------------------------------------------------------ |
+| `processes`        | 要使用的工作进程数量，不传默认等于 `os.cpu_count()`（CPU 核心数）。 |
+| `initializer`      | 进程初始化函数，每个工作进程都在启动时调用initializer(*initargs) |
+| `initargs`         | 初始化的参数，必须是元组                                     |
+| `maxtasksperchild` | 每个子进程最大任务数。**解决内存泄漏神器**。默认是None，工作进程寿与池齐 |
+| `context`          | 进程启动方式，一般不用管，Windows 默认是 `spawn`，Linux 默认是 `fork`。 |
+
+​	注意：进程池对象的方法只有创建他的进程能够调用
+
+​	使用时一般只指定prcesser参数
+
+###### 			2.常用方法【进程池的进程默认是守护进程，所以需join()确保主进程等待】
+
+| 方法                                                         | 作用                                                         | 是否阻塞 |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | -------- |
+| `pool.apply(func[, args[,kwds]])`                            | 提交**单个**任务。用args参数及kwds命名参数调用func，在返回结果前阻塞。func只会在一个进程池中的一个工作进程中执行 | 阻塞     |
+| `pool.apply_async(func[, args[,kwds,[,callback[,error_callback]]]])` | 异步调用，返回 `AsyncResult`，callback获取结果，error_callback处理异常 | 非阻塞   |
+| `pool.close()`                                               | 阻止后续任务提交到进程池，所有任务执行完毕后工作进程退出     | -        |
+| `pool.terminate()`                                           | **强制终止**所有子进程，不必等待未完成的任务                 | -        |
+| `pool.join()`                                                | z阻塞主进程等待工作进程结束。调用前必须调用close()或者terminate | 阻塞     |
+| `pool.map_async(func, iterable)`                             | 批量提交，返回 `AsyncResult`                                 | 非阻塞   |
+| `pool.map(func, iterable)`                                   | 批量提交，**按顺序**返回结果                                 | 阻塞     |
+| `pool.imap(func, iterable)`                                  | 迭代器版 map，**边跑边出结果**                               | 非阻塞   |
+| `pool.starmap(func, iterable)`                               | 批量提交，自动解包参数                                       | 阻塞     |
+| `result.get()`                                               | 从 `AsyncResult` 获取结果                                    | 阻塞     |
+| `result.wait()`                                              | 等待任务完成                                                 | 阻塞     |
+| `result.ready()`                                             | 判断任务是否完成                                             | 非阻塞   |
+| `result.successful()`                                        | 判断任务是否成功                                             | 非阻塞   |
+| `pool.__len__()`                                             | 当前活跃进程数                                               | -        |
+
+**注意：用apply_async时，加join()【守护进程需要阻塞】和close()【join前必须使用close或者terminate】**
+
+##### 		4.进程间通信 【进程间不共享全局变量，进程之间内存是完全独立】
+
+​	Queue通信 `mutiprocessing.Queue([maxsize])`返回一个使用一个通道和少量锁和信号量实现的共享队列实例。当一个进程将一个对象放放进队列中时，一个写入线程会启动并将对象从缓冲区写入管道中。默认队列是无限大小，可以通过maxsize参数限制
+
+​	qsize()：返回队列大致长度。由于多线程或者多进程上下文，这个数字不可靠
+
+​	empty()：队列为空返回True。由于多线程或者多进程的环境，这个状态不可靠
+
+​	full()：队列满返回True。由于多线程或者多进程的环境，这个状态不可靠
+
+​	put(obj[,block[,timeout]])：将obj放入队列。如果参数block是True（默认值）而且timeout是None（默认值），将会阻塞当前进程，知道有空的缓冲槽。如果timeout为正数，则阻塞最多timeout秒后还有没可用的缓冲槽是抛出queue.Full异常。反之（block为False），仅当有可用缓冲槽时才放入对象，否则抛出queue.Full异常（此时timeout忽略）【 **put_nowait(obj) 相当于put(obj,False)** 】
+
+​	get([block,[timeout]])：从队列中取出并返回对象。如果block为True（默认值）并且timeout为None时，将会阻塞进程，直到队列中出现可用对象。如果timeout为正数，则阻塞最多timeout秒后还没有可用的对象则抛出queue.Empty 异常。反之（block为False），仅当有可用对象能够取出时返回，否则抛出异常queue.Empty异常（timeout忽略）【**get_nowait() 相当于 get(False)**】
+
+**注意：Pool进程池实现 【multiprocessing.Manager().Queue配合进程池中的apply_async】【兼容性】**
+
+**注意：multiprocessing.Process 与Queue 使用时候需要在最后阻塞【p1.join()】【兼容性】**
+
+#### 2.线程（分配CPU资源）		
+
+​	线程是处理器任务调度和执行的基本单位
+
+​	一个进程至少有一个线程，也可以运行多个线程
+
+​	多个线程之间可共享数据
+
+​	线程出错异常后，如果没有捕获，可能导致整个进程崩溃
+
+​	多线程是指同一个进程中同时执行多个任务
+
+##### 	1.使用 threading.Thread 创建一个线程
+
+Python标准库中提供两个模块：\_thread（低级）和threading（高级模块，对\_thread进行封装）
+
+`threading.Thread(group=None,target=None,name=None,args=(),kwargs={},*,daemon=None)`
+
+| 参数   | 作用                                                         |
+| ------ | ------------------------------------------------------------ |
+| group  | 应为None，保留给将来实现 ThreadGroup 类的扩展使用            |
+| target | 用于run() 方法带哦用的可调用对象。默认是None，表示不需要任何方法 |
+| name   | 线程名称。默认以”Thread-N“构架唯一名称。或者”Thread-N(target)“形式，target为target.\_\_name\_\_,如果指定了target参数的情况下 |
+| args   | 用于发起调用目标函数的参数列表或者元组。默认（）             |
+| kwargs | 用于发起调用目标函数的关键字参数字典。默认{}                 |
+| daemon | 是否是守护线程模式，默认None                                 |
+
+​	Thread的属性和方法与其他常用方法
+
+| 属性           | 作用                                                         |
+| -------------- | ------------------------------------------------------------ |
+| `t.name`       | 线程名，默认 `Thread-N`，可自定义                            |
+| `t.ident`      | 线程 ID（类似进程的 PID）                                    |
+| `t.daemon`     | 是否守护线程，**必须在 start() 前设置**                      |
+| `t.native_id`  | 操作系统级线程 ID（Python 3.8+）此线程的线程id，os（内核）分配 |
+| `t.is_alive()` | 线程是否存活                                                 |
+
+| 方法                       | 作用                                     |
+| -------------------------- | ---------------------------------------- |
+| `t.start()`                | 启动线程，自动调用 `run()                |
+| `t.join([timeout])`        | 阻塞线程，直到完成主和超时。             |
+| `t.is_alive()`             | 判断线程是否存活                         |
+| `t.run()`                  | 自定义线程行为，默认调用传入的target对象 |
+| threading.enumerate()      | 查看都有哪些现场                         |
+| threading.current_thread() | 返回当前线程实例                         |
+
+##### 	2.自定义 threading.Thread 子类创建一个线程
+
+##### 	3.创建线程池
+
+ThreadPoolExecutor 是 concurrent.futures模块中的线程池实现，它允许我们轻松的提交任务到线程池中
+
+###### 		1.线程池的创建
+
+`concurrent.futures.ThreadPoolExecutor(max_workers=None,thread_name_prefix="",initializer=None,initargs=())`
+
+| 参数               | 作用                                   |
+| ------------------ | -------------------------------------- |
+| max_workers        | 线程池最大线程数（默认取决于系统资源） |
+| thread_name_prefix | 线程名前缀                             |
+| initializer        | 每个线程启动时的初始化函数             |
+| initargs           | 传给 `initializer` 的参数，必须是元组  |
+
+###### 		2.线程池常用的方法 
+
+| 方法                                            | 作用                                                         |
+| ----------------------------------------------- | ------------------------------------------------------------ |
+| `submit(fn, *args，**kwargs)`                   | 提交单个任务，返回 `Future`对象，使用Future.result()获取任务结果 |
+| `map(fn, *iterables，timeout=None,chunksize=1)` | 类似map批量提交，按顺序返回，可迭代对象传给目标函数，        |
+| `shutdown(wait=True,cancel_futures=False)`      | 关闭池，wait是否等待线程中所有线程完成任务，cancel_futures是否取消尚未开始任务 |
+| `with` 语句                                     | 自动 `shutdown`                                              |
+| `as_completed(futures)`                         | 按完成顺序迭代 `Future`                                      |
+| `wait(futures)`                                 | 等待一批任务完成                                             |
+
+##### 	4.互斥锁
+
+线程安全问题：多个线程访问相同独享的时候，如果对对象进行修改操作，那么可能会出现线程问题
+
+【解决】互斥锁概念：保证了每次只有一个线程进行写入操作，从而保证了多线程请胯下的数据正确性
+
+​		1.添加： threading.Lock() 创建互斥锁
+
+​		2.使用：lock.acquire(\[blocking=True][,timeout=1])来获取锁
+
+blocking为True，线程会阻塞直到获取锁。如果为False线程立刻返回。获取锁成功返回True，否则返回False/timeout为等待超时时间。超时未获得锁返回False
+
+​		3.释放锁：lock.release() 释放
+
+#### 3.进程和线程的区分
+
+##### 	资源分配
+
+​	进程拥有独立的内存空间和系统资源，每个进程都有自己的代码段、数据段和堆栈等。而线程共享所属进程的内存空间和资源，同一进程内的线程之间可以直接访问共享内存。
+
+##### 	开销
+
+​		创建进程需要分配独立的内存、打开文件等系统资源，开销较大。
+
+​		创建线程只需在所属进程的内存空间内进行少量资源分配，开销较小。
+
+##### 	并发性
+
+​		在多核心 CPU 环境下，进程和线程都可以异步执行但进程之间的异步是真正的异步（每个进程在不同核心上同时执行），而线程之间的异步在单核心 CPU 上是通过时间片轮转实现的 “伪异步”（在同一时刻只有一个线程执行），在多核心 CPU 上可以实现异步。但是在Cpython中，因为GIL的存在，也不是真正的异步
+
+##### 	独立性
+
+​		进程之间相互独立，一个进程的崩溃通常不会影响其他进程。而同一进程内的线程之间相互影响，一个线程出现问题可能导致整个进程崩溃。
+
+##### 	通信
+
+​		进程间通信相对复杂，需要使用特殊的机制，如管道、消息队列、共享内存等。
+
+​		线程间通信相对简单，因为它们共享内存，可以直接访问共享变量。
+
+#### 4.使用场景
+
+##### 	适合使用多线程的情况：
+
+**I/O 密集型任务：**如网络请求、文件读写等。线程共享内存，切换开销小，在等待 I/O 操作完成的时间内可以切换到其他线程执行，提高整体效率。例如一个程序需要同时从多个网站下载数据，使用多线程可以在等待网络响应时执行其他下载任务。
+
+**对资源共享要求高：**线程间共享内存，方便数据共享和通信。例如在一个图形界面程序中，多个线程需要共享界面数据并进行实时更新。
+
+##### 	适合使用多进程的情况：
+
+**CPU 密集型任务**：多进程可以利用多核心 CPU 实现真正的并行计算，充分发挥硬件性能。例如进行复杂的科学计算、数据处理等任务，每个进程在不同核心上独立计算，提高计算速度。
+
+**需要隔离的任务：**进程相互独立，一个进程崩溃不会影响其他进程。对于一些可能出现异常或不稳定的任务，使用多进程可以保证系统的稳定性。例如运行多个独立的服务，每个服务作为一个进程，避免一个服务出错影响其他服务。
 
 ------
 
