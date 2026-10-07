@@ -7,7 +7,7 @@ import re
 class Customer:
     """客户类"""
 
-    def __init__(self, c_id, c_name, c_age="None", c_phone="None", c_email="None"):
+    def __init__(self, c_id, c_name, c_age="None", c_email="None", c_phone="None"):
         self.c_id = c_id
         self.c_name = c_name
         self.c_age = c_age
@@ -16,7 +16,7 @@ class Customer:
 
     def __str__(self):
         return (f"|ID:|{self.c_id:<15} |Name:|{self.c_name:<15} |Age:|{self.c_age:<15}"
-                f"|Phone:|{self.c_phone:<15} |Email:|{self.c_email:<15}|")
+                f"|Email:|{self.c_email:<15} |Phone:|{self.c_phone:<15}|")
 
     # 类方法 静态方法
     @staticmethod
