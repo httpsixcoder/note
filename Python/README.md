@@ -646,7 +646,7 @@ print(power_of_two(10))  # 1024
 
 ```python
 # 添加了注释的自定义函数
-def dog(name:str,age:(1,99),species:'狗的品种') -> tuple:
+def dog(name:str,age:(1,99),gender:Literal["男"，"女"],species:'狗的品种') -> tuple:
     return(name,age,species)
 
 # 通过函数.__annotations来查看函数的说明    【函数的注释不具备强制性，可以不按注释传值】
@@ -1743,6 +1743,40 @@ for x in gen:
 
 ​		3. 外部函数将内部函数作为返回值
 
+内层函数对象中把局部变量放入一个cell，多个cell再放入一个tuple，closure
+
+```python
+def outer():
+    x = 10      # 被内层函数用到的变量
+    y = 20      # 被内层函数用到的变量
+    z = 30      # 没有被内层函数用到
+    def inner():
+        return x + y
+    return inner
+f = outer()
+# 查看 inner 函数的闭包属性
+print(f.__closure__)
+# 输出：(<cell at 0x...: int object at 0x...>, <cell at 0x...: int object at 0x...>)
+# 查看闭包中 cell 的数量
+print(len(f.__closure__))    # 2，因为只用了 x 和 y，没用 z
+# 查看每个 cell 里存的值
+for cell in f.__closure__:
+    print(cell.cell_contents)  # 10, 20
+```
+
+简单案例：
+
+```python
+def outer():
+    x = 10                # 外部函数的局部变量
+    def inner():          # 1. 外部函数内定义内部函数
+        return x          # 2. 内部函数用到外部函数的变量 x
+    return inner          # 3. 外部函数将内部函数作为返回值
+
+f = outer()               # f 现在指向 inner 函数
+print(f())                # 输出：10
+```
+
 ### 5.装饰器（Decorator）（OCP开闭原则，扩展开放修改关闭）
 
 ​	1.本质：【**闭包**实现】
@@ -1880,6 +1914,10 @@ multiprocessing.Process(group=None,target=None,name=None,args=(),kwargs={},*,dae
 | `os.getpid()`       | 获取当前进程编号                                             |
 | `os.getppid()`      | 获取当前进程的父进程编号                                     |
 
+cp=current_process：获取当前进程信息
+
+pp=parent_process：获取父进程信息
+
 ```python
 import multiprocessing
 import time
@@ -1931,7 +1969,7 @@ if __name__ == '__main__':
     w2.start()
 ```
 
-##### 		3.创建进程池
+##### 		3.创建进程池【旧版】
 
 `multiprocessing.Pool([processes[,initializer[,initargs[,maxtasksperchild[,context]]]]])`
 
@@ -1970,6 +2008,92 @@ if __name__ == '__main__':
 
 **注意：用apply_async时，加join()【守护进程需要阻塞】和close()【join前必须使用close或者terminate】**
 
+##### ProcessPoolExecutor（进程池）【推荐】
+
+```python
+concurrent.futures.ProcessPoolExecutor(max_workers=None, mp_context=None, initializer=None, initargs=(), max_tasks_per_child=None)
+```
+
+###### 1. 进程池的创建
+
+| 参数                  | 作用                                                         |
+| --------------------- | ------------------------------------------------------------ |
+| `max_workers`         | 要使用的工作进程数量，不传默认等于 `os.cpu_count()`（CPU 核心数）。 |
+| `mp_context`          | 进程启动方式（上下文），一般不用管，Windows 默认 `spawn`，Linux 默认 `fork`。 |
+| `initializer`         | 进程初始化函数，每个工作进程启动时调用 `initializer(*initargs)`。 |
+| `initargs`            | 初始化的参数，必须是元组。                                   |
+| `max_tasks_per_child` | 每个子进程最大任务数。**解决内存泄漏神器**。默认 `None`，工作进程寿与池齐。 |
+
+**注意**：
+
+- 用 `with` 语句管理，退出时自动 `shutdown()`，最省心。
+- `max_workers` 不传时，Python 3.8+ 默认取 `os.cpu_count()`，**CPU 密集任务直接用默认值就行**。
+
+###### 2. 常用方法
+
+| 方法                                                      | 作用                                                         | 是否阻塞 |
+| --------------------------------------------------------- | ------------------------------------------------------------ | -------- |
+| `executor.submit(fn, *args, **kwargs)`                    | 提交**单个**任务，返回 `Future` 对象。                       | 非阻塞   |
+| `executor.map(fn, *iterables, timeout=None, chunksize=1)` | 批量提交，**按输入顺序**返回结果。                           | 阻塞     |
+| `executor.shutdown(wait=True, cancel_futures=False)`      | 关闭池。`wait` 控制是否等待任务完成，`cancel_futures` 是否取消未开始的任务。 | 可选阻塞 |
+| `with` 语句                                               | 自动 `shutdown`，等价于 `close() + join()`。                 | -        |
+
+###### 3. Future 对象的方法
+
+| 方法                           | 作用                         | 是否阻塞 |
+| ------------------------------ | ---------------------------- | -------- |
+| `future.result([timeout])`     | 获取结果，**会抛异常**。     | 阻塞     |
+| `future.exception()`           | 获取异常，不抛。             | 阻塞     |
+| `future.done()`                | 任务是否完成。               | 非阻塞   |
+| `future.cancelled()`           | 是否被取消。                 | 非阻塞   |
+| `future.cancel()`              | 尝试取消（未开始才能取消）。 | 非阻塞   |
+| `future.add_done_callback(fn)` | 任务完成后自动调回调。       | 非阻塞   |
+
+###### 4. 辅助函数
+
+| 函数                                                         | 作用                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `concurrent.futures.as_completed(futures)`                   | **按完成顺序**迭代 `Future`，谁先完成谁先返回。              |
+| `concurrent.futures.wait(futures, timeout=None, return_when=ALL_COMPLETED)` | 等待一批任务完成，可指定 `FIRST_COMPLETED` / `FIRST_EXCEPTION`。 |
+
+###### 5. 标准用法示例
+
+```python
+from concurrent.futures import ProcessPoolExecutor
+import os
+
+
+def func(x):
+    return f"[进程 {os.getpid()}] 计算 {x}² = {x * x}"
+
+
+if __name__ == '__main__':
+    with ProcessPoolExecutor(max_workers=10) as executor:
+        # map：批量提交，按顺序返回
+        for result in executor.map(func, range(10)):
+            print(result)
+```
+
+```python
+"""pool process"""
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import current_process
+def func(n):
+    cp=current_process()
+    for i in range(n):
+        print(cp.name,end="")
+    print()
+    return n
+if __name__=="__main__":
+    with ProcessPoolExecutor(max_workers=10) as executor:
+        fs=executor.map(func,range(10))
+        # executor.submit(func,1)
+        # executor.submit(func,2)
+        # executor.submit(func,3)
+        for i in fs:
+            print(i)
+```
+
 ##### 		4.进程间通信 【进程间不共享全局变量，进程之间内存是完全独立】
 
 ​	Queue通信 `mutiprocessing.Queue([maxsize])`返回一个使用一个通道和少量锁和信号量实现的共享队列实例。当一个进程将一个对象放放进队列中时，一个写入线程会启动并将对象从缓冲区写入管道中。默认队列是无限大小，可以通过maxsize参数限制
@@ -1984,7 +2108,7 @@ if __name__ == '__main__':
 
 ​	get([block,[timeout]])：从队列中取出并返回对象。如果block为True（默认值）并且timeout为None时，将会阻塞进程，直到队列中出现可用对象。如果timeout为正数，则阻塞最多timeout秒后还没有可用的对象则抛出queue.Empty 异常。反之（block为False），仅当有可用对象能够取出时返回，否则抛出异常queue.Empty异常（timeout忽略）【**get_nowait() 相当于 get(False)**】
 
-**注意：Pool进程池实现 【multiprocessing.Manager().Queue配合进程池中的apply_async】【兼容性】**
+**注意：在 ProcessPoolExecutor 中，不能直接传 multiprocessing.Queue（会报 RuntimeError），需要用 multiprocessing.Manager().Queue()。**
 
 **注意：multiprocessing.Process 与Queue 使用时候需要在最后阻塞【p1.join()】【兼容性】**
 
@@ -2020,15 +2144,15 @@ Python标准库中提供两个模块：\_thread（低级）和threading（高级
 | 属性           | 作用                                                         |
 | -------------- | ------------------------------------------------------------ |
 | `t.name`       | 线程名，默认 `Thread-N`，可自定义                            |
-| `t.ident`      | 线程 ID（类似进程的 PID）                                    |
-| `t.daemon`     | 是否守护线程，**必须在 start() 前设置**                      |
+| `t.ident`      | Python 内部线程 ID，非零整数，线程结束后可能被复用。         |
+| `t.daemon`     | 是否守护线程，**必须在 start() 前设置**，主线程退出会**强制终止**守护线程，即使它还没执行完。**默认是 False**。 |
 | `t.native_id`  | 操作系统级线程 ID（Python 3.8+）此线程的线程id，os（内核）分配 |
 | `t.is_alive()` | 线程是否存活                                                 |
 
 | 方法                       | 作用                                     |
 | -------------------------- | ---------------------------------------- |
 | `t.start()`                | 启动线程，自动调用 `run()                |
-| `t.join([timeout])`        | 阻塞线程，直到完成主和超时。             |
+| `t.join([timeout])`        | 阻塞线程，可以设置超时。                 |
 | `t.is_alive()`             | 判断线程是否存活                         |
 | `t.run()`                  | 自定义线程行为，默认调用传入的target对象 |
 | threading.enumerate()      | 查看都有哪些线程                         |
@@ -2064,7 +2188,7 @@ ThreadPoolExecutor 是 concurrent.futures模块中的线程池实现，它允许
 
 ##### 	4.互斥锁
 
-线程安全问题：多个线程访问相同独享的时候，如果对对象进行修改操作，那么可能会出现线程问题
+线程安全问题：多个线程访问相同独享的时候，如果对对象进行修改操作，那么可能会出现数据不一致问题。
 
 【解决】互斥锁概念：保证了每次只有一个线程进行写入操作，从而保证了多线程情况下的数据正确性
 
@@ -2075,6 +2199,276 @@ ThreadPoolExecutor 是 concurrent.futures模块中的线程池实现，它允许
 blocking为True，线程会阻塞直到获取锁。如果为False线程立刻返回。获取锁成功返回True，否则返回False/timeout为等待超时时间。超时未获得锁返回False
 
 ​		3.释放锁：lock.release() 释放
+
+```python
+lock = threading.Lock()
+with lock:               # 自动加锁 + 释放，最推荐
+    # 临界区
+    pass
+```
+
+##### 5.同步原语
+
+###### 1.`threading.Condition`（条件变量）
+
+​	**生产者做出产品后，通知消费者来取。**
+
+​	1..关键方法
+
+| 方法                 | 作用                          |
+| -------------------- | ----------------------------- |
+| `cond.wait()`        | 阻塞当前线程，等待 `notify()` |
+| `cond.wait(timeout)` | 等待，超时后自动醒来          |
+| `cond.notify()`      | 唤醒**一个**等待的线程        |
+| `cond.notify_all()`  | 唤醒**所有**等待的线程        |
+
+​	2.何时使用
+
+- **生产者-消费者模型**。
+
+- **线程间需要基于条件协作**的场景。
+
+    3.⚠️ 坑
+
+- `wait()` 必须放在 `with cond:` 里（先获取锁）。
+
+- `while not dishes:` 而不是 `if not dishes:`，防止**伪唤醒**。
+
+```python
+import threading
+import time
+# 共享资源
+dishes = []
+cond = threading.Condition()
+def chef():
+    """厨师：做好菜后通知服务员"""
+    for i in range(3):
+        time.sleep(1)
+        with cond:
+            dishes.append(f"菜{i}")
+            print(f"[厨师] 做好了 菜{i}")
+            cond.notify()   # 通知一个等待的线程
+def waiter():
+    """服务员：等待菜做好，然后端走"""
+    for i in range(3):
+        with cond:
+            while not dishes:
+                cond.wait()   # 等待通知，菜没好就继续等
+            dish = dishes.pop(0)
+            print(f"[服务员] 端走了 {dish}")
+t1 = threading.Thread(target=chef)
+t2 = threading.Thread(target=waiter)
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+```
+
+######  2.`threading.Event`（事件通知）
+
+​	**一个开关，多个线程等待它被打开。**
+
+​	1.关键方法
+
+| 方法             | 作用                        |
+| ---------------- | --------------------------- |
+| `event.wait()`   | 阻塞，直到 `set()`          |
+| `event.set()`    | 设为 True，唤醒所有等待线程 |
+| `event.clear()`  | 设为 False，重置            |
+| `event.is_set()` | 判断当前状态                |
+
+​	2.`Condition` vs `Event`
+
+| 对比     | `Condition`        | `Event`              |
+| -------- | ------------------ | -------------------- |
+| 唤醒方式 | 可唤醒一个或多个   | 唤醒所有             |
+| 是否重置 | 唤醒后自动恢复等待 | 需要 `clear()` 重置  |
+| 适用     | 生产者-消费者      | 一个信号多个线程等待 |
+
+```python
+import threading
+import time
+event = threading.Event()
+
+def waiter(name):
+    """服务员：等待老板喊开餐"""
+    print(f"[{name}] 等待开餐...")
+    event.wait()       # 阻塞，直到 event.set()
+    print(f"[{name}] 收到通知，开始工作！")
+def boss():
+    """老板：3 秒后喊开餐"""
+    time.sleep(3)
+    print("[老板] 开餐！")
+    event.set()        # 打开开关
+threads = [threading.Thread(target=waiter, args=(f"服务员{i}",)) for i in range(3)]
+for t in threads:
+    t.start()
+t_boss = threading.Thread(target=boss)
+t_boss.start()
+for t in threads:
+    t.join()			
+t_boss.join()
+```
+
+###### 3.`threading.Semaphore`（信号量）
+
+​	**限制同时访问某个资源的线程数量。**
+
+​	1.关键方法
+
+| 方法            | 作用                   |
+| --------------- | ---------------------- |
+| `sem.acquire()` | 获取信号量，计数器减 1 |
+| `sem.release()` | 释放信号量，计数器加 1 |
+| `with sem:`     | 自动 acquire + release |
+
+​	2.何时使用
+
+- 限制**数据库连接数**。
+- 限制**并发 API 调用数**（比如大模型 API 有 QPS 限制）。
+- 限制**文件读写并发**。
+
+```python
+import threading
+import time
+
+sem = threading.Semaphore(3)   # 最多 3 个线程同时访问
+
+
+def chef(name):
+    with sem:                    # 自动 acquire/release
+        print(f"[{name}] 使用灶台")
+        time.sleep(2)
+        print(f"[{name}] 用完灶台")
+
+
+threads = [threading.Thread(target=chef, args=(f"厨师{i}",)) for i in range(6)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+```
+
+###### 4.`threading.local`（线程局部变量）
+
+​	**每个线程有自己独立的变量副本，互不干扰。**
+
+​	1.关键特性
+
+- 每个线程访问 `local_data.name` 时，**是各自的副本**。
+
+- 主线程和其他线程**互不影响**。
+
+    2.何时使用
+
+- **数据库连接**：每个线程独立连接。
+
+- **请求上下文**：Web 框架里，每个请求线程独立保存用户信息。
+
+- **日志上下文**：每个线程有独立的 trace_id。
+
+    3.⚠️ 坑
+
+- 不要在 `local_data` 里存**共享**的数据，它就是给独立副本用的。
+
+```python
+import threading
+local_data = threading.local()
+def worker(name):
+    local_data.name = name              # 只有当前线程能访问
+    print(f"[{name}] local_data.name = {local_data.name}")
+t1 = threading.Thread(target=worker, args=("A",))
+t2 = threading.Thread(target=worker, args=("B",))
+t1.start()
+t2.start()
+t1.join()
+t2.join()
+# 主线程访问，会发现 name 不存在
+try:
+    print(local_data.name)
+except AttributeError:
+    print("主线程里没有 local_data.name")
+```
+
+###### 5.`threading.Timer`（定时器）
+
+​	**延迟一段时间后执行一次函数。**
+
+​	1.关键方法
+
+| 方法                              | 作用                   |
+| --------------------------------- | ---------------------- |
+| `Timer(interval, function, args)` | 创建定时器             |
+| `t.start()`                       | 启动定时器             |
+| `t.cancel()`                      | 取消定时器（在触发前） |
+
+​	2.何时使用
+
+- **定时任务**：延迟执行、超时控制。
+
+- **心跳检测**：定时检查连接状态。
+
+    3.⚠️ 注意
+
+- `Timer` 是**一次性**的，执行完就结束。
+
+- 想周期执行，需要在函数里**重新创建 Timer**。
+
+```python
+import threading
+def hello():
+    print("3 秒到了，执行任务！")
+# 3 秒后执行 hello
+t = threading.Timer(3.0, hello)
+t.start()
+print("主线程继续执行...")
+t.join()
+```
+
+###### 6.`threading.Barrier`（栅栏）
+
+​	**所有线程都到达某个点后，才继续执行。**
+
+​	1.关键方法
+
+| 方法                    | 作用                        |
+| ----------------------- | --------------------------- |
+| `barrier.wait()`        | 到达栅栏，等待其他线程      |
+| `barrier.wait(timeout)` | 超时抛 `BrokenBarrierError` |
+| `barrier.reset()`       | 重置栅栏                    |
+| `barrier.abort()`       | 让所有等待线程抛异常        |
+
+​	2.何时使用
+
+- **多线程分阶段执行**：所有线程完成第一阶段才进入第二阶段。
+- **并行计算同步点**：等所有计算线程都完成再汇总。
+
+```python
+import threading
+import time
+barrier = threading.Barrier(3)   # 需要 3 个线程到达
+def worker(name):
+    print(f"[{name}] 到达栅栏")
+    time.sleep(1)
+    barrier.wait()                # 等待其他 2 个线程到达
+    print(f"[{name}] 所有线程到达，继续执行")
+threads = [threading.Thread(target=worker, args=(f"线程{i}",)) for i in range(3)]
+for t in threads:
+    t.start()
+for t in threads:
+    t.join()
+```
+
+7.六大工具对比总览【场景：一家餐厅的后厨】
+
+| 工具              | 一句话作用                                                   | 典型场景               |
+| ----------------- | ------------------------------------------------------------ | ---------------------- |
+| `Condition`       | 满足条件才唤醒【厨师做好菜，喊一声：“菜好了！”，服务员才过来端菜。没有菜时，服务员在门口等着。】 | 生产者-消费者          |
+| `Event`           | 一个信号唤醒所有【老板说“**开餐！**”所有服务员才开始工作。】 | 全局启动/停止          |
+| `Semaphore`       | 限制并发数【餐厅只有 **3 个灶台**，最多 3 个厨师同时炒菜，其他厨师排队等待。】 | 连接池、限流           |
+| `threading.local` | 每个线程独立数据【每个服务员有自己的**私人点单本**，记录自己的订单，别人看不到。】 | 请求上下文、数据库连接 |
+| `Timer`           | 延迟执行一次【“**10 分钟后上菜**”——到点自动执行。】          | 定时任务               |
+| `Barrier`         | 所有线程到齐才继续【**5 个厨师都到齐了，才开火炒菜**，否则等着。】 | 分阶段并行计算         |
 
 #### 3.进程和线程的区分
 
@@ -2233,6 +2627,10 @@ blocking为True，线程会阻塞直到获取锁。如果为False线程立刻返
 **Ctrl + Shift + V**：从剪贴板历史粘贴
 
 **Ctrl + Alt + M**：提取方法，快速封装成一个独立的函数。
+
+**Ctrl + P**：参数信息
+
+**Ctrl + Q**：快速文档（看函数说明）
 
 ------
 
