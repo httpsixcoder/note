@@ -26,15 +26,35 @@
 
 ## 1. 基础概念
 
-| 概念     | 说明                                                         |
-| :------- | :----------------------------------------------------------- |
-| DB       | Database，存储数据的地方                                     |
-| DBMS     | 数据库管理系统（MySQL、Oracle、SqlServer）                   |
-| SQL      | 结构化查询语言，操作数据库的通用语言                         |
-| 关系型   | **二维表** + SQL + 强 ACID（MySQL、PostgreSQL、Oracle）      |
-| 非关系型 | **键值**/文档/图 + 高扩展 + 最终一致（Redis、MongoDB、Neo4j） |
+| 概念                         | 说明                                                         |
+| :--------------------------- | :----------------------------------------------------------- |
+| DB                           | Database，存储数据的地方                                     |
+| DBMS                         | 数据库管理系统（MySQL、Oracle、SqlServer）                   |
+| SQL                          | 结构化查询语言，操作数据库的通用语言                         |
+| 关系型                       | **二维表** + SQL + 强 ACID（MySQL、PostgreSQL、Oracle）      |
+| 非关系型 NoSQL(not only SQL) | **键值**/文档/图 + 高扩展 + 最终一致（Redis、MongoDB、Neo4j） |
 
 **表关系**：一对一、一对多（外键）、多对多（中间表）。
+
+**关系型 = 表格 + SQL + 强事务；**
+
+**非关系型 = 灵活模型 + 高扩展 + 最终一致。**
+
+**关系型和非关系型数据库的区别？**
+
+- 数据模型不同：关系型是二维表，非关系型是键值/文档/图等。
+
+- Schema（图）：关系型严格，非关系型灵活。
+
+- 事务：关系型强 ACID，非关系型 BASE。
+
+- 扩展：关系型垂直扩展，非关系型水平扩展。
+
+- 查询：关系型 SQL + JOIN，非关系型各自 API。
+
+- 适用场景：关系型适合强一致、复杂查询；非关系型适合高并发、海量数据、灵活 schema。
+
+*MySQL5.5之后  InnoDB 是默认的存储引擎。*
 
 ---
 
@@ -48,20 +68,21 @@
 | **DCL**  | Data Control Language      | grant、commit、rollback |
 | **其他** | 命令                       | use、show、set          |
 
-| 命令                                 | 作用                          |
-| ------------------------------------ | ----------------------------- |
-| `show variables like '%character%';` | **查看 MySQL 的字符集配置**。 |
-| `show variables;`                    | 查看所有系统变量              |
-| `show variables like '%xxx%';`       | 模糊匹配变量名                |
-| `show status;`                       | 查看服务器状态信息            |
-| `show status like '%xxx%';`          | 模糊匹配状态名                |
-| `show databases;`                    | 查看所有数据库                |
-| `show tables;`                       | 查看当前库的表                |
-| `show create table 表名;`            | 查看建表语句                  |
-| `show index from 表名;`              | 查看索引                      |
-| `show engines;`                      | 查看存储引擎                  |
-| `show charset;`                      | 查看支持的字符集              |
-| `show collation;`                    | 查看校对规则                  |
+| 命令                                      | 作用                          |
+| ----------------------------------------- | ----------------------------- |
+| `mysql -h主机名 -P端口号 -u用户名 -p密码` | **完整的连接命令**            |
+| `show index from 表名;`                   | **查看索引**                  |
+| `show variables like '%character%';`      | **查看 MySQL 的字符集配置**。 |
+| `show variables;`                         | 查看所有系统变量              |
+| `show variables like '%xxx%';`            | 模糊匹配变量名                |
+| `show status;`                            | 查看服务器状态信息            |
+| `show status like '%xxx%';`               | 模糊匹配状态名                |
+| `show databases;`                         | 查看所有数据库                |
+| `show tables;`                            | 查看当前库的表                |
+| `show create table 表名;`                 | 查看建表语句                  |
+| `show engines;`                           | 查看存储引擎                  |
+| `show charset;`                           | 查看支持的字符集              |
+| `show collation;`                         | 查看校对规则                  |
 
 语法规范**：
 
@@ -112,7 +133,7 @@ create table [if not exists] 表名(
 show tables;
 show tables from 库名;
 show create table 表名;
-desc 表名;
+desc 表名;	【desc只用于查看表结构】
 
 -- 修改表编码
 alter table 表名 character set 字符集 collate 校对规则;
@@ -159,7 +180,7 @@ create table 新表 as (select * from 旧表);
 -- 全字段插入（值顺序、类型、个数必须与表结构一一对应）
 insert into 表名 values(值1,值2,...),(值1,值2,...);
 
--- 指定字段插入
+-- 指定字段插入【批量】
 insert into 表名(字段1,字段2) values(值1,值2),(值1,值2);
 
 -- 复制数据
@@ -172,11 +193,11 @@ insert into 表名 (select * from 旧表 where 条件);
 -- 条件删除
 delete from 表名 where 条件;
 
--- 删除所有（表结构保留，可回滚）
+-- 删除所有（表结构保留，可回滚）新数据续用旧的id
 delete from 表名;
 
--- 截断表（表结构保留，不可回滚，效率高）
-truncate 表名;
+-- 截断表（表结构保留，不可回滚，效率高）删除整个表，创建一个一摸一样的，id从1开始
+【⭐这是DDL，事务只对DML有效，对DDL无效】truncate 表名;
 ```
 
 **delete vs truncate**：
@@ -205,9 +226,10 @@ select 表达式;
 select 函数;
 select 字段列表 from 表名;
 select 字段列表 from 表名 where 条件;
+【注意：工程中select 避免写 `*` ，而是把需要的字段都写出来】
 ```
 
-### 5.2 别名与去重
+### 5.2 别名与去重⭐
 
 ```sql
 select 字段名1 as "别名1", 字段名2 as "别名2" from 表名 as 表别名;
@@ -215,6 +237,8 @@ select 字段名1 as "别名1", 字段名2 as "别名2" from 表名 as 表别名
 -- 去重
 select distinct 字段列表 from 表名;
 ```
+
+**注意：若别名中存在空格等特殊符号，此时别名必须加单引号或飘号**
 
 ### 5.3 七个子句顺序
 
@@ -280,16 +304,20 @@ select * from t_employee limit 10, 5;   -- 第3页
 
 ### 6.1 算术运算符
 
-| 运算符       | 说明                         |
-| :----------- | :--------------------------- |
-| `+`          | 求和（**无字符串拼接功能**） |
-| `-`          | 减                           |
-| `*`          | 乘                           |
-| `/`          | 除                           |
-| `div`        | 整除                         |
-| `%` 或 `mod` | 取余                         |
+| 运算符       | 说明                                            |
+| :----------- | :---------------------------------------------- |
+| `+`          | 求和（**无字符串拼接功能**，非数字则视为0处理） |
+| `-`          | 减                                              |
+| `*`          | 乘                                              |
+| `/`          | 除                                              |
+| `div`        | 整除                                            |
+| `%` 或 `mod` | 取余                                            |
 
 **NULL与其他数据类型的运算都是NULL**
+
+**日期类型和字符串类型必须加单引号。**
+
+**数值类型可加单引号可不加单引号，所以`select 1+'2'; -- 3` 当作数值2处理 **
 
 ### 6.2 比较运算符
 
@@ -327,7 +355,7 @@ where ename like '_红%';    -- 第二个字是"红"
 | `&&` 或 `and` | 与   |
 | `||` 或 `or`  | 或   |
 | `!` 或 `not`  | 非   |
-| `xor`         | 异或 |
+| `^`或`xor`    | 异或 |
 
 ### 6.6 NULL 处理
 
@@ -366,13 +394,17 @@ select salary + salary * ifnull(commission_pct, 0) from t_employee;
 
 ### 7.1 数值类型
 
-| 类型                       | 说明                       |
-| :------------------------- | :------------------------- |
-| `int`                      | 整数                       |
-| `int(M) unsigned zerofill` | 显示宽度 M，无符号，零填充 |
-| `float` / `double`         | 浮点数                     |
-| `decimal(M,D)`             | 定点数，精度高，适合货币   |
-| `bit(M)`                   | 位类型，1~64 位            |
+| 类型                       | 说明                                                         |
+| :------------------------- | :----------------------------------------------------------- |
+| `int`                      | 整数                                                         |
+| `int(M) unsigned zerofill` | 显示宽度 M（一般无意义），无符号，零填充（此时**M宽度**就有意义了） |
+| `float` / `double` [m,d]   | 浮点数【m：总长度，d：小数点位数】                           |
+| `decimal(M,D)`             | 定点数，精度高，适合货币                                     |
+| `bit(M)`                   | 位类型，1~64 位，二进制格式显示数据，果需要以整数形式显示，可以使用BIN()或CONV()。 |
+
+**雪花算法**：是 Twitter 开源的一种分布式 ID 生成算法，用于在分布式系统中生成全局唯一且趋势递增的 ID。
+
+雪花算法生成的 ID 是一个 **64 位的整数**。推荐存储`bigint`。
 
 ### 7.2 字符串类型
 
@@ -387,13 +419,17 @@ select salary + salary * ifnull(commission_pct, 0) from t_employee;
 
 ### 7.3 日期时间类型
 
-| 类型        | 格式                | 说明                     |
-| :---------- | :------------------ | :----------------------- |
-| `year`      | YYYY                | 1901~2155                |
-| `date`      | YYYY-MM-DD          | 年月日                   |
-| `time`      | HH:MM:SS            | 时分秒                   |
-| `datetime`  | YYYY-MM-DD HH:MM:SS | 年月日时分秒             |
-| `timestamp` | YYYY-MM-DD HH:MM:SS | 时区转换，范围 1970~2038 |
+| 类型        | 格式                | 说明                                   |
+| :---------- | :------------------ | :------------------------------------- |
+| `year`      | YYYY                | 1901~2155                              |
+| `date`      | YYYY-MM-DD          | 年月日                                 |
+| `time`      | HH:MM:SS            | 时分秒                                 |
+| `datetime`  | YYYY-MM-DD HH:MM:SS | 年月日时分秒【不受时区影响】           |
+| `timestamp` | YYYY-MM-DD HH:MM:SS | 时区转换，范围 1970~2038【受时区影响】 |
+
+select @@time_zone;	【打印时区】
+
+set time_zone ='+2:00' 	【修改时区】
 
 ### 7.4 其他
 
@@ -581,6 +617,8 @@ on emp.mid = mgr.eid;
 ---
 
 ## 10. 子查询
+
+【**顺序：from ==> join on ==> where ==> group by ==> having ==> order by ==>  limit**】
 
 ### 10.1 select 中嵌套
 
