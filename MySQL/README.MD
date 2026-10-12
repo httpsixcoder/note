@@ -20,7 +20,6 @@
 - [12. 事务](#12-事务)
 - [13. 用户与权限](#13-用户与权限)
 - [14. 核心定义与范式](#14-核心定义与范式)
-- [15.练习题](#15-练习题)
 
 ---
 
@@ -478,21 +477,21 @@ set time_zone ='+2:00' 	【修改时区】
 
 ### 8.3 日期时间函数
 
-| 函数                                          | 说明          |
-| :-------------------------------------------- | :------------ |
-| `curdate()` / `current_date()`                | 当前日期      |
-| `curtime()` / `current_time()`                | 当前时间      |
-| `now()` / `sysdate()` / `current_timestamp()` | 当前日期时间  |
-| `utc_date()` / `utc_time()`                   | UTC 日期/时间 |
-| `unix_timestamp(date)`                        | UNIX 时间戳   |
-| `year/month/day/hour/minute/second(date)`     | 取各部分      |
-| `extract(type from date)`                     | 提取指定部分  |
-| `datediff(date1,date2)`                       | 日期间隔天数  |
-| `timediff(time1,time2)`                       | 时间间隔      |
-| `date_add/date_sub(date, interval expr type)` | 日期加减      |
-| `date_format(datetime, fmt)`                  | 格式化        |
-| `str_to_date(str, fmt)`                       | 解析为日期    |
-| `get_format(val_type, format_type)`           | 返回显示格式  |
+| 函数                                           | 说明          |
+| :--------------------------------------------- | :------------ |
+| `curdate()` / `current_date()`                 | 当前日期      |
+| `curtime()` / `current_time()`                 | 当前时间      |
+| `now()` / `sysdate()` / `current_timestamp()`  | 当前日期时间  |
+| `utc_date()` / `utc_time()`                    | UTC 日期/时间 |
+| `unix_timestamp(date)`                         | UNIX 时间戳   |
+| `year/month/day/hour/minute/second(date)`      | 取各部分      |
+| `extract(type from date)`                      | 提取指定部分  |
+| `datediff(date1,date2)`⭐                       | 日期间隔天数  |
+| `timediff(time1,time2)`⭐                       | 时间间隔      |
+| `date_add/date_sub(date, interval expr type)⭐` | 日期加减      |
+| `date_format(datetime, fmt)`                   | 格式化        |
+| `str_to_date(str, fmt)`                        | 解析为日期    |
+| `get_format(val_type, format_type)`            | 返回显示格式  |
 
 ### 8.4 加密函数
 
@@ -512,57 +511,161 @@ set time_zone ='+2:00' 	【修改时区】
 
 ### 8.6 条件判断函数
 
-| 函数                                         | 说明                 |
-| :------------------------------------------- | :------------------- |
-| `if(a,x,y)`                                  | a 为真返回 x，否则 y |
-| `ifnull(x,y)`                                | x 非空返回 x，否则 y |
-| `case when 条件 then 结果 ... else 结果 end` | 多条件判断           |
-| `case 表达式 when 值 then 结果 ... end`      | 等值判断             |
+| 函数                                         | 说明                       |
+| :------------------------------------------- | :------------------------- |
+| `if(a,x,y)`                                  | a 为真返回 x，否则 y       |
+| `ifnull(x,y)`                                | x 非空返回 x，否则 y       |
+| `case when 条件 then 结果 ... else 结果 end` | 多条件判断【常用于字段中】 |
+| `case 表达式 when 值 then 结果 ... end`      | 等值判断【常用于字段中】   |
 
 ### 8.7 分组函数（聚合）
 
-| 函数                | 说明      |
-| :------------------ | :-------- |
-| `avg(x)`            | 平均值    |
-| `sum(x)`            | 求和      |
-| `max(x)` / `min(x)` | 最大/最小 |
-| `count(x)`          | 计数      |
+⭐**如果没有group by的话则所有数据看作一组【仅一行数据】**
+
+| 函数                        | 说明                                              |
+| :-------------------------- | :------------------------------------------------ |
+| `avg([DISTINCT],x)`         | 平均值【可以选参数去重】                          |
+| `sum(x)`                    | 求和                                              |
+| `max(x)` / `min(x)`         | 最大/最小                                         |
+| `count(DISTINCT x, [x...])` | 计数【忽略 NULL，可以去重，也可以多字段组合计数】 |
 
 ```sql
 select count(*) from t_employee;          -- 统计行数
 select count(1) from t_employee;          -- 同上
+select count(0) from t_employee;          -- 同上
+select sum(1) from t_employee;          -- 也可以统计行数
 select count(commission_pct) from t_employee;  -- 忽略 NULL
 ```
 
 ### 8.8 窗口函数
 
-| 函数                              | 说明             |
-| :-------------------------------- | :--------------- |
-| `row_number()`                    | 顺序编号 1,2,3,4 |
-| `rank()`                          | 并列跳过 1,1,3   |
-| `dense_rank()`                    | 并列不跳过 1,1,2 |
-| `lag()/lead()`                    | 前/后偏移值      |
-| `first_value()/last_value()`      | 首/末值          |
-| `sum()/avg()/count()/max()/min()` | 窗口聚合         |
+#### 1.基本语法
 
+~~~sql
 ```sql
 函数名(参数) over(
     [partition by 字段]
     [order by 字段]
     [rows between <start> and <end>]
 )
-```
+~~~
 
-**窗口范围**：
+| 部分           | 作用                  | 是否必须 |
+| -------------- | --------------------- | -------- |
+| `over()`       | 声明窗口函数          | ✅ 必须   |
+| `partition by` | 分区（类似 group by） | 可选     |
+| `order by`     | 分区内排序            | 可选     |
+| `rows between` | 窗口范围              | 可选     |
+
+#### 2.常用函数：
+
+| 函数                                       | 说明             |
+| :----------------------------------------- | :--------------- |
+| `row_number()`【需要over()】               | 顺序编号 1,2,3,4 |
+| `rank()【需要over()】`                     | 并列跳过 1,1,3   |
+| `dense_rank()`【需要over()】               | 并列不跳过 1,1,2 |
+| `lag()/lead()【需要over()】`               | 前/后偏移值      |
+| `first_value()/last_value()【需要over()】` | 首/末值          |
+| `sum()/avg()/count()/max()/min()`          | 窗口聚合         |
+
+#### 3.窗口范围：
+
 - `unbounded preceding`：分区第一行
 - `n preceding`：当前行前 n 行
 - `current row`：当前行
 - `n following`：当前行后 n 行
 - `unbounded following`：分区最后一行
 
+默认窗口范围：`unbounded preceding and current row`
+
+#### 4.排名函数对比
+
+| 数据 | `row_number()` | `rank()` | `dense_rank()` |
+| ---- | -------------- | -------- | -------------- |
+| 1000 | 1              | 1        | 1              |
+| 1000 | 2              | 1        | 1              |
+| 2000 | 3              | 3        | 2              |
+| 3000 | 4              | 4        | 3              |
+
+#### 5.常用示例
+
+```sql
+-- 顺序编号
+select row_number() over() as rn, ename, salary from t_employee;
+
+-- 分区排名（按部门分组，薪资降序）
+select ename, did, salary,
+       dense_rank() over(partition by did order by salary desc) as dr
+from t_employee;
+
+-- 三排名对比
+select ename, salary,
+       row_number() over(order by salary) as rn,
+       rank()       over(order by salary) as rk,
+       dense_rank() over(order by salary) as dr
+from t_employee;
+
+-- 前后值
+select ename, salary,
+       lag(salary, 1, 0)  over(order by salary) as 上一位薪资,
+       lead(salary, 1, 0) over(order by salary) as 下一位薪资
+from t_employee;
+
+-- 首末值（last_value 要显式指定范围）
+select ename, salary,
+       first_value(salary) over(order by salary) as 首位薪资,
+       last_value(salary)  over(order by salary
+                                rows between unbounded preceding
+                                         and unbounded following) as 末位薪资
+from t_employee;
+
+-- 累计求和
+select ename, salary,
+       sum(salary) over(order by salary
+                        rows between unbounded preceding
+                                 and current row) as 累计薪资
+from t_employee;
+
+-- 分区聚合
+select ename, did, salary,
+       avg(salary) over(partition by did) as 部门平均薪资
+from t_employee;
+
+-- 常用套路：Top-N 问题
+-- 每个部门薪资前 3
+select *
+from (
+    select ename, did, salary,
+           dense_rank() over(partition by did order by salary desc) as dr
+    from t_employee
+) t
+where t.dr <= 3;
+
+-- 每个部门最低 3 个薪资
+select *
+from (
+    select ename, did, salary,
+           row_number() over(partition by did order by salary) as rn
+    from t_employee
+) t
+where t.rn <= 3;
+```
+
 ---
 
 ## 9. 关联查询
+
+*七种结果*
+
+| #    | 名称                                       | 集合含义    | SQL 写法                                         |
+| ---- | ------------------------------------------ | ----------- | ------------------------------------------------ |
+| 1    | **内连接【inner】**                        | A ∩ B       | `A inner join B on ...`                          |
+| 2    | **左连接【left join】**                    | A           | `A left join B on ...`                           |
+| 3    | **右连接【right join】**                   | B           | `A right join B on ...`                          |
+| 4    | **左连接排除交集【left join，B NULL】**    | A - A∩B     | `A left join B on ... where B.关联字段 is null`  |
+| 5    | **右连接排除交集【right join，A NULL】**   | B - A∩B     | `A right join B on ... where A.关联字段 is null` |
+| 6    | **全外连接【left join union right join】** | A ∪ B       | `A left join B union A right join B`             |
+| 7    | **全外连接排除交集【4 union 5】**          | A ∪ B - A∩B | 左边排除 + 右边排除，再 union                    |
 
 ### 9.1 内连接
 
@@ -618,7 +721,27 @@ on emp.mid = mgr.eid;
 
 ## 10. 子查询
 
-【**顺序：from ==> join on ==> where ==> group by ==> having ==> order by ==>  limit**】
+**【书写顺序：from ==> join on ==> where ==> group by ==> having ==> order by ==>  limit】**
+
+**【执行顺序：FROM → ON → JOIN → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT】**
+
+order by:
+
+- *order中有一个with rollup 扩展*【作用是再分组的最后一行显示总和】
+
+- *asc代表升序，desc代表降序，默认升序*
+
+```sql
+select did, count(*)
+from t_employee
+group by did with rollup;
+```
+
+limit m,n：
+
+- n：表示最多该页显示几行
+- m：表示从第几行开始取记录，第一个行的索引是0 
+- m = (page-1)*n，page表示第几页
 
 ### 10.1 select 中嵌套
 
@@ -637,8 +760,18 @@ where salary = (select max(salary) from t_employee)
 -- 单列多值：用 in / not in
 where did in (select did from t_employee where ename='白露')
 
--- 单列多值 + 比较：用 any / all
+-- 单列多值 + 比较：用 any / all / in / exists
 where salary > all(select salary from t_employee where ename in (...))
+【注意：NOT IN 的 NULL 陷阱（重要！）】
+
+-- 如果子查询结果里有 NULL，not in 会返回空结果！
+where did not in (select did from t_employee where ...)
+原因：not in 等价于 != any，而 任何值 != NULL 结果是 NULL，不是 true。
+-- 解决
+-- 方法 1：排除 NULL
+where did not in (select did from t_employee where did is not null)
+-- 方法 2：用 not exists 替代
+where not exists(select 1 from t_employee e where e.did = outer.did)
 ```
 
 ### 10.3 exists 型
@@ -676,19 +809,49 @@ where did = (select did from t_department where dname='测试部');
 
 **注意**：update/delete 的表和子查询的表是同一张时，需要再套一层临时表。
 
-### 10.6 CTE 通用表达式
+### 10.6使用子查询复制表结构和数据
+
+#### 	1.复制表结构
+
+```sql
+-- 仅复制表结构，可以用create语句
+create table department like t_department;
+```
+
+#### 	2.复制一条或多条记录
+
+```sql
+-- 使用insert语句+子查询，复制数据，此时insert不用写values
+insert into department (select * from t_department where did<=3);
+```
+
+#### 	3.同时复制表结构和记录
+
+```sql
+-- 同时复制表结构+数据
+create table d_department as (select * from t_department);
+-- 如果select后面是部分字段，复制的新表就只有这一部分字段
+```
+
+### 10.7 CTE 通用表达式
 
 ```sql
 with [recursive]
 cte_name [(字段名)] as (子查询),
 cte_name2 as (子查询)
-select ... from cte_name;
+
+recursive：表示通用表达式中需要递归引用自己，不写则不递归引用
+-- 例
+with
+emp as (select eid,ename,salary,`mid` from t_employee where salary<9000),
+mgr(meid,mename,msalary) as (select eid,ename,salary from t_employee)
 ```
 
 **递归 CTE**：
 
 ```sql
-with recursive cte as (
+with recursive 
+cte as (
     select eid, ename, mid from emp where eid=21
     union all
     select emp.eid, emp.ename, emp.mid
@@ -701,17 +864,37 @@ select * from cte;
 
 ## 11. 约束
 
+*四个主要约束：*
+
+| 约束         | 关键字        | 对应的完整性            | 作用                       |
+| ------------ | ------------- | ----------------------- | -------------------------- |
+| **主键约束** | `primary key` | 实体完整性              | 唯一且非空，一行一标识     |
+| **外键约束** | `foreign key` | 引用完整性              | 子表引用主表，保证关联正确 |
+| **唯一约束** | `unique key`  | 实体完整性 / 用户自定义 | 值唯一，允许 NULL          |
+| **非空约束** | `not null`    | 域完整性                | 字段不能为 NULL            |
+
 ### 11.1 约束类型
 
-| 类型   | 关键字           | 级别       |
-| :----- | :--------------- | :--------- |
-| 主键   | `primary key`    | 表级       |
-| 外键   | `foreign key`    | 表级       |
-| 唯一键 | `unique key`     | 表级       |
-| 非空   | `not null`       | 列级       |
-| 检查   | `check`          | 表级       |
-| 默认值 | `default`        | 列级       |
-| 自增   | `auto_increment` | 键字段属性 |
+| 类型   | 关键字                                                       | 级别       |
+| :----- | :----------------------------------------------------------- | :--------- |
+| 主键   | `primary key`                                                | 表级       |
+| 外键   | `foreign key`                                                | 表级       |
+| 唯一键 | `unique key`【允许 NULL：多个 NULL 可以共存（和主键最大区别）】 | 表级       |
+| 非空   | `not null`                                                   | 列级       |
+| 检查   | `check`   例如：check (age between 18 and 60)                | 表级       |
+| 默认值 | `default`                                                    | 列级       |
+| 自增   | `auto_increment`                                             | 键字段属性 |
+
+- 表级约束（看其他行）：键约束，检查约束
+- 列级约束（只看当前数据）：非空约束，默认值约束
+
+所有的表级约束都可以在“information_schema.table_constraints”表中查看。
+
+```sql
+select * from information_schema.table_constraints where table_name = '表名';
+```
+
+*键约束会自动创建索引，提高查询效率。约束是逻辑概念，不占用物理空间。索引是物理概念，占用物理空间*
 
 ### 11.2 非空约束
 
@@ -738,8 +921,10 @@ create table 表名(
 -- 建表后添加
 alter table 表名 add unique (字段名);
 
--- 删除（通过删除索引）
+-- 删除（通过删除索引）索引名默认是字段名，复合唯一默认是第一个字段名
 alter table 表名 drop index 索引名;
+-- 查看表的索引信息
+show index from 表名; 
 ```
 
 **特点**：允许 NULL，一个表可有多个唯一键。
@@ -761,6 +946,8 @@ alter table 表名 drop primary key;
 ```
 
 **特点**：唯一且非空，一个表只能有一个主键。
+
+开辟单独的物理空间来存储每一个主键的目录表（Btree结构）
 
 ### 11.5 自增约束
 
@@ -815,6 +1002,11 @@ alter table 表名 drop check 检查约束名;
 
 ### 11.8 外键约束
 
+**外键约束会影响性能，效率，所以很多人不愿意加外键约束。**
+
+- 主表（父表）：被引用的表，被参考的表
+- 从表（子表）：引用别人的表，参考别人的表
+
 ```sql
 -- 建表时（先建主表，再建从表）
 create table 从表(
@@ -856,25 +1048,25 @@ show index from 表名;
 
 ### 12.1 ACID
 
-| 属性                   | 说明                             |
-| :--------------------- | :------------------------------- |
-| **原子性 Atomicity**   | 要么都发生，要么都不发生         |
-| **一致性 Consistency** | 从一个一致状态变到另一个一致状态 |
-| **隔离性 Isolation**   | 事务之间互不干扰                 |
-| **持久性 Durability**  | 提交后永久保存                   |
+| 属性                   | 说明                                                         |
+| :--------------------- | :----------------------------------------------------------- |
+| **原子性 Atomicity**   | 事务中的操作要么都发生，要么都不发生                         |
+| **一致性 Consistency** | 失误必须使数据库从一个一致状态变到另一个一致状态             |
+| **隔离性 Isolation**   | 事务互不干扰，一个事务的内部操作以及使用的数据对并发的其他事务是隔离的 |
+| **持久性 Durability**  | 提交后永久保存，事务一旦提交，对数据库的修改时永久性的       |
 
 ### 12.2 事务操作
 
 ```sql
--- 手动提交模式
+-- 开启手动提交模式【下面的SQL都需要手动提交】
 set autocommit = false;   -- 或 0
 -- ... 操作 ...
 commit;                   -- 提交
 rollback;                 -- 回滚
-set autocommit = true;    -- 恢复自动提交
+set autocommit = true;    -- 或 1 。恢复自动提交
 
 -- 自动提交模式下开启事务
-start transaction;
+start transaction;        --开始事务
 -- ... 操作 ...
 commit;   -- 或 rollback;
 ```
@@ -891,24 +1083,43 @@ commit;   -- 或 rollback;
 
 ### 12.4 隔离级别
 
-| 级别                      | 脏读 | 不可重复读 | 幻读                 |
-| :------------------------ | :--- | :--------- | :------------------- |
-| `read-uncommitted`        | ✅    | ✅          | ✅                    |
-| `read-committed`          | ❌    | ✅          | ✅                    |
-| `repeatable-read`（默认） | ❌    | ❌          | ❌（MySQL MVCC 避免） |
-| `serializable`            | ❌    | ❌          | ❌                    |
+隔离级别越高, 数据一致性就越好, 但并发性越弱。
+
+| 级别                            | 脏读 | 不可重复读 | 幻读                 |
+| :------------------------------ | :--- | :--------- | :------------------- |
+| `read-uncommitted`【RU】        | ✅    | ✅          | ✅                    |
+| `read-committed`【RC】          | ❌    | ✅          | ✅                    |
+| `repeatable-read`（默认）【RR】 | ❌    | ❌          | ❌（MySQL MVCC 避免） |
+| `serializable`【串行化】        | ❌    | ❌          | ❌                    |
 
 ```sql
 -- 修改隔离级别
 set transaction_isolation = '隔离级别';
+-- 修改当前会话的隔离级别
+set session transaction isolation level read committed;
+-- 修改全局隔离级别（影响新连接）
+set global transaction isolation level read committed;
 
 -- 查看隔离级别
 select @@transaction_isolation;
 ```
 
+### 12.5保存点 SAVEPOINT
+
+```sql
+start transaction;
+insert into user(name) values('张三');
+savepoint sp1;
+insert into user(name) values('李四');
+rollback to sp1;      -- 只回滚李四，张三保留
+commit;               -- 提交张三
+```
+
 ---
 
 ## 13. 用户与权限
+
+ 登录验证：用户主机IP地址（客户端主机的IP，而非MySQL服务器的IP） + 用户名 + 密码三重验证。
 
 ### 13.1 用户管理
 
@@ -942,6 +1153,51 @@ flush privileges;
 ```
 
 **权限级别**：全局 > 数据库 > 表 > 字段 > 存储过程/函数
+
+#### 常见全局权限
+
+| 权限             | 说明                        |
+| ---------------- | --------------------------- |
+| `all privileges` | 所有权限                    |
+| `select`         | 查询                        |
+| `insert`         | 插入                        |
+| `update`         | 更新                        |
+| `delete`         | 删除                        |
+| `create`         | 创建库/表                   |
+| `drop`           | 删除库/表                   |
+| `grant option`   | **能把自己权限授予别人**    |
+| `super`          | 高级管理权限（kill 线程等） |
+| `reload`         | 执行 flush 操作             |
+
+```sql
+-- 全局
+-- 示例：授予所有权限
+grant all privileges on *.* to 'admin'@'%';
+-- 示例：只授予查询权限
+grant select on *.* to 'readonly'@'%';
+
+--数据库
+-- 只允许查询 atguigu 库
+grant select on atguigu.* to 'reader'@'localhost';
+-- 允许操作 shop 库所有表
+grant all privileges on shop.* to 'shop_admin'@'%';
+
+-- 表
+-- 只能查 t_employee 表
+grant select on atguigu.t_employee to 'viewer'@'localhost';
+-- 只能改 t_department 表
+grant update on atguigu.t_department to 'editor'@'localhost';
+
+-- 字段
+-- 只能查员工的姓名和电话，不能查薪资
+grant select(ename, tel) on atguigu.t_employee to 'contact'@'%';
+-- 只能改员工的地址
+grant update(address) on atguigu.t_employee to 'updater'@'%';
+
+--存储过程（procedure）或函数（function）。
+-- 允许执行某个存储过程
+grant execute on procedure atguigu.p_add_employee to 'hr'@'%';
+```
 
 ### 13.3 MySQL 8 忘记 root 密码
 
@@ -1019,12 +1275,24 @@ FLUSH PRIVILEGES;
 | CTE 通用表达式                     | with ... as (...)                    |
 | 检查约束生效                       | MySQL 8.0.16+                        |
 
-## 15.练习题
+查看系统表类型：
 
-持续更新中......
+```sql
+SELECT DISTINCT(ENGINE) FROM information_schema.tables;
+```
 
-[第七章 运算符](<./t test 7.sql>)✅ 
+使用SHOW语句查看MySQL8.0版本数据库的默认编码：
+
+```sql
+SHOW VARIABLES LIKE 'character_set_database';
+```
+
+使用SHOW语句查看utf8mb4字符集的部分校对规则如下：
+
+```sql
+SHOW COLLATION LIKE 'utf8mb4_0900%';
+```
 
 ---
 
-*本文档为速查手册，仅保留核心代码与关键定义。完整教程请参考尚硅谷 MySQL 教程。*
+*本文档为速查手册，仅保留核心代码与关键定义。*
