@@ -809,6 +809,15 @@ where did = (select did from t_department where dname='测试部');
 
 **注意**：update/delete 的表和子查询的表是同一张时，需要再套一层临时表。
 
+```sql
+-- 嵌套一层结果集。
+update t_employee set 
+salary=(select salary from (select salary from t_employee where ename = '孙红梅') temp)
+where ename ='李冰冰';
+```
+
+
+
 ### 10.6使用子查询复制表结构和数据
 
 #### 	1.复制表结构
@@ -1048,14 +1057,16 @@ show index from 表名;
 
 ### 12.1 ACID
 
-| 属性                   | 说明                                                         |
-| :--------------------- | :----------------------------------------------------------- |
-| **原子性 Atomicity**   | 事务中的操作要么都发生，要么都不发生                         |
-| **一致性 Consistency** | 失误必须使数据库从一个一致状态变到另一个一致状态             |
-| **隔离性 Isolation**   | 事务互不干扰，一个事务的内部操作以及使用的数据对并发的其他事务是隔离的 |
-| **持久性 Durability**  | 提交后永久保存，事务一旦提交，对数据库的修改时永久性的       |
+| 属性                   | 说明                                                     |
+| :--------------------- | :------------------------------------------------------- |
+| **原子性 Atomicity**   | 事务不可再分，最小单元。【要么全做，要么全不做】         |
+| **一致性 Consistency** | 数据库从一个“合法状态”变到另一个“合法状态”。【总数守恒】 |
+| **隔离性 Isolation**   | 并发的事务之间互相隔离，互不干扰【互不干扰】             |
+| **持久性 Durability**  | 一旦 commit 提交，才是永久修改。【提交即永久】           |
 
 ### 12.2 事务操作
+
+**【 修改变量影响的是当前整个连接 】**
 
 ```sql
 -- 开启手动提交模式【下面的SQL都需要手动提交】
@@ -1292,6 +1303,495 @@ SHOW VARIABLES LIKE 'character_set_database';
 ```sql
 SHOW COLLATION LIKE 'utf8mb4_0900%';
 ```
+
+## 15.Python连接MySQL
+
+### 1. **安装依赖包**
+
+```python
+conda install pymysql
+```
+
+### 2. **代码**
+
+```python
+"""
+    该案例演示了python操作MySQL数据库
+"""
+import pymysql
+# 获取连接
+def get_connection():
+    try:
+        conn = pymysql.connect(
+            host='192.168.10.150',
+            port=3306,
+            user='root',
+            password='123456',
+            database='atguigu',
+            charset='utf8mb4',
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        return conn
+    except:
+        print("获取连接的时候发生了异常")
+
+# 从数据库表中查询数据
+def select_data(conn):
+    # 创建游标对象
+    my_cursor = conn.cursor()
+
+    # 执行sql语句
+    sql = "select * from t_department"
+    my_cursor.execute(sql)
+
+    # 获取查询结果
+    results = my_cursor.fetchall()
+
+    for row in results:
+        print(row)
+    my_cursor.close()
+
+def insert_data(conn):
+    my_c = conn.cursor()
+    sql = "insert into t_department values (10,'test','testtest')"
+    my_c.execute(sql)
+    # 提交事务
+    conn.commit()
+    my_c.close()
+
+def delete_data(conn):
+    my_c = conn.cursor()
+    sql = "delete from t_department where did=10"
+    my_c.execute(sql)
+    # 提交事务
+    conn.commit()
+    my_c.close()
+
+def update_data(conn):
+    my_c = conn.cursor()
+    sql = "update t_department set dname='dev' where did=10"
+    my_c.execute(sql)
+    # 提交事务
+    conn.commit()
+    my_c.close()
+
+if __name__ == '__main__':
+    conn = get_connection()
+    # insert_data(conn)
+    # update_data(conn)
+    delete_data(conn)
+    select_data(conn)
+    conn.close()
+```
+
+#### 阶段一：简单脚本 / 小工具 / 学习
+
+- **推荐**：`PyMySQL` + `DBUtils` 连接池
+- **理由**：保持简单，同时通过连接池解决性能痛点。
+- **代码示例**：
+
+```python
+"""
+PyMySQL + DBUtils 连接池：CRUD 完整示例
+"""
+import pymysql
+from dbutils.pooled_db import PooledDB
+# ========== 1. 创建连接池（全局唯一） ==========
+POOL = PooledDB(
+    creator=pymysql,        # 底层驱动
+    maxconnections=10,      # 最大连接数
+    mincached=2,            # 初始化时创建的空闲连接数
+    maxcached=5,            # 连接池中最多空闲连接数
+    blocking=True,          # 连接池满时是否阻塞等待
+    host='localhost',
+    port=3306,
+    user='root',
+    password='admin',
+    database='atguigu',
+    charset='utf8mb4',
+    cursorclass=pymysql.cursors.DictCursor
+)
+# ========== 2. 获取连接 ==========
+def get_conn():
+    """从连接池获取连接"""
+    return POOL.connection()
+# ========== 3. 查询（Read） ==========
+def select_all():
+    """查询所有部门"""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("select * from t_department")
+            return cursor.fetchall()
+    finally:
+        conn.close()   # 注意：这里是归还给连接池，不是真的关闭
+
+def select_by_id(did):
+    """按 ID 查询"""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "select * from t_department where did = %s",
+                (did,)
+            )
+            return cursor.fetchone()
+    finally:
+        conn.close()
+# ========== 4. 新增（Create） ==========
+def insert(did, dname, note):
+    """新增部门"""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "insert into t_department (did, dname, note) values (%s, %s, %s)",
+                (did, dname, note)
+            )
+        conn.commit()
+        print(f"✅ 新增成功：did={did}")
+    except pymysql.MySQLError as e:
+        conn.rollback()
+        print(f"❌ 新增失败：{e}")
+    finally:
+        conn.close()
+# ========== 5. 修改（Update） ==========
+def update(did, dname):
+    """修改部门名"""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "update t_department set dname = %s where did = %s",
+                (dname, did)
+            )
+        conn.commit()
+        print(f"✅ 修改成功：did={did}")
+    except pymysql.MySQLError as e:
+        conn.rollback()
+        print(f"❌ 修改失败：{e}")
+    finally:
+        conn.close()
+# ========== 6. 删除（Delete） ==========
+def delete(did):
+    """删除部门"""
+    conn = get_conn()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "delete from t_department where did = %s",
+                (did,)
+            )
+        conn.commit()
+        print(f"✅ 删除成功：did={did}")
+    except pymysql.MySQLError as e:
+        conn.rollback()
+        print(f"❌ 删除失败：{e}")
+    finally:
+        conn.close()
+
+if __name__ == '__main__':
+    # 增
+    insert(10, 'test', 'testtest')
+    insert(11, 'dev', 'devteam')
+    # 查
+    print("\n--- 查询全部 ---")
+    for row in select_all():
+        print(row)
+    # 改
+    update(10, 'test-v2')
+    # 查单个
+    print("\n--- 查询 did=10 ---")
+    print(select_by_id(10))
+    # 删
+    delete(10)
+    delete(11)
+    # 再查
+    print("\n--- 删除后全部 ---")
+    for row in select_all():
+        print(row)
+```
+
+- **关键参数建议**：`maxconnections` 建议设为 `10-20`，`mincached` 设为 `2-5`。
+
+#### 阶段二：中型 Web 项目 / 追求开发效率
+
+- **推荐**：`SQLAlchemy` ORM + `mysqlclient` (同步) 或 `asyncmy` (异步)
+- **理由**：用 ORM 提升开发效率，用 `mysqlclient`/`asyncmy` 保证性能，用连接池管理连接。
+- **代码示例 (同步 SQLAlchemy)**：
+
+```python
+# pip install sqlalchemy mysqlclient
+# 或者 pip install sqlalchemy pymysql
+"""
+SQLAlchemy ORM 同步版：CRUD 完整示例
+"""
+from sqlalchemy import create_engine, Column, Integer, String, select
+from sqlalchemy.orm import declarative_base, sessionmaker
+# ========== 1. 创建引擎（自带连接池） ==========
+engine = create_engine(
+    "mysql+pymysql://root:admin@localhost:3306/atguigu",  # 驱动可以换 mysqlclient
+    pool_size=10,          # 连接池大小
+    max_overflow=20,       # 池满后允许临时连接数
+    pool_recycle=3600,     # 连接回收时间（秒）
+    pool_pre_ping=True,    # 取连接前 ping 一次
+    echo=False             # True 会打印 SQL，调试用
+)
+# ========== 2. 定义基类 ==========
+Base = declarative_base()
+# ========== 3. 定义模型（对应表） ==========
+class Department(Base):
+    __tablename__ = 't_department'
+
+    did = Column(Integer, primary_key=True)
+    dname = Column(String(50))
+    note = Column(String(100))
+
+    def __repr__(self):
+        return f"<Department(did={self.did}, dname={self.dname}, note={self.note})>"
+# ========== 4. 创建 Session 工厂 ==========
+Session = sessionmaker(bind=engine)
+def get_session():
+    """获取一个会话"""
+    return Session()
+# ========== 5. 查询（Read） ==========
+def select_all():
+    """查询所有部门"""
+    with get_session() as session:
+        stmt = select(Department)
+        return session.execute(stmt).scalars().all()
+def select_by_id(did):
+    """按 ID 查询"""
+    with get_session() as session:
+        return session.get(Department, did)
+# ========== 6. 新增（Create） ==========
+def insert(did, dname, note):
+    """新增部门"""
+    session = get_session()
+    try:
+        dept = Department(did=did, dname=dname, note=note)
+        session.add(dept)
+        session.commit()
+        print(f"✅ 新增成功：did={did}")
+    except Exception as e:
+        session.rollback()
+        print(f"❌ 新增失败：{e}")
+    finally:
+        session.close()
+# ========== 7. 修改（Update） ==========
+def update(did, dname):
+    """修改部门名"""
+    session = get_session()
+    try:
+        dept = session.get(Department, did)
+        if dept:
+            dept.dname = dname
+            session.commit()
+            print(f"✅ 修改成功：did={did}")
+        else:
+            print(f"⚠️ 部门 {did} 不存在")
+    except Exception as e:
+        session.rollback()
+        print(f"❌ 修改失败：{e}")
+    finally:
+        session.close()
+# ========== 8. 删除（Delete） ==========
+def delete(did):
+    """删除部门"""
+    session = get_session()
+    try:
+        dept = session.get(Department, did)
+        if dept:
+            session.delete(dept)
+            session.commit()
+            print(f"✅ 删除成功：did={did}")
+        else:
+            print(f"⚠️ 部门 {did} 不存在")
+    except Exception as e:
+        session.rollback()
+        print(f"❌ 删除失败：{e}")
+    finally:
+        session.close()
+if __name__ == '__main__':
+    # 增
+    insert(10, 'test', 'testtest')
+    insert(11, 'dev', 'devteam')
+    # 查
+    print("\n--- 查询全部 ---")
+    for dept in select_all():
+        print(dept)
+    # 改
+    update(10, 'test-v2')
+    # 查单个
+    print("\n--- 查询 did=10 ---")
+    print(select_by_id(10))
+    # 删
+    delete(10)
+    delete(11)
+    # 再查
+    print("\n--- 删除后全部 ---")
+    for dept in select_all():
+        print(dept)
+```
+
+- `pool_size` 和 `max_overflow` 是最关键的参数，建议根据并发量调整。
+
+#### 阶段三：异步高并发 API / FastAPI 项目
+
+- **推荐**：`SQLAlchemy` (async) + `asyncmy` 或 `aiomysql`
+- **理由**：充分利用 `asyncio` 的非阻塞特性，大幅提升 I/O 密集型服务的并发能力。
+- **代码示例 (异步 SQLAlchemy)**：
+
+```python
+# pip install sqlalchemy asyncmy
+# 或者 pip install sqlalchemy aiomysql
+"""
+SQLAlchemy ORM 异步版：CRUD 完整示例
+"""
+import asyncio
+from sqlalchemy import Column, Integer, String, select
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import declarative_base
+
+# mysql+asyncmy://root:admin@localhost:3306/atguigu
+# └─┬─┘ └──┬──┘   └┬─┘ └─┬─┘ └───┬───┘ └─┬─┘ └──┬──┘
+#   │      │       │     │       │       │      │
+#  数据库  驱动    用户名 密码      主机     端口    库名
+# asyncmy	性能最强，Cython 实现，推荐
+# ========== 1. 创建异步引擎 ==========
+async_engine = create_async_engine(
+    "mysql+asyncmy://root:admin@localhost:3306/atguigu",
+    pool_size=5,            # 异步池可以设大一点
+    max_overflow=10,        # 溢出连接数
+    pool_recycle=3600,      # 连接回收时间
+    pool_pre_ping=True,     # 连接预检，每次从池里取连接前，先 ping 一下，确保连接是活的。
+    echo=False              # SQL 日志开关，是否把执行的 SQL 打印到控制台。
+)
+# ========== 2. 定义基类 ==========
+Base = declarative_base()
+# ========== 3. 定义模型 ==========
+# 表 → 类（t_department → Department）
+# 行 → 对象（一行记录 → 一个 Department 实例）
+# 列 → 属性（did、dname、note）
+class Department(Base):
+    # 对应的数据库名字【不写的话默认对应数据库名为类名：即department】
+    __tablename__ = 't_department'
+    # did           属性名（对应表的字段名）
+    # Column(...)   声明这是一个表字段
+    did = Column(Integer, primary_key=True)
+    dname = Column(String(50))
+    note = Column(String(100))
+    def __repr__(self):
+        return f"<Department(did={self.did}, dname={self.dname}, note={self.note})>"
+# ========== 4. 创建异步 Session 工厂 ==========
+# async_sessionmaker 预绑定 engine 和参数，之后直接调用生成 Session。
+# 用法
+    # 创建工厂
+    #     AsyncSessionLocal = async_sessionmaker(async_engine, ...)
+    # 用工厂生成 Session
+    #     async with AsyncSessionLocal() as session:
+AsyncSessionLocal = async_sessionmaker(
+    async_engine,  #用哪个引擎连数据库 bind=async_engine
+    class_=AsyncSession, #指定生成哪种 Session 类，默认生成同步 Session
+    expire_on_commit=False   # commit后对象是否过期，方便继续用对象
+)
+async def get_session():
+    """获取一个异步会话（上下文管理器）"""
+    async with AsyncSessionLocal() as session:  #异步上下文管理器，确保 Session 用完自动关闭。
+        yield session #把 Session 交给调用方，用完后自动关闭。
+# ========== 5. 查询（Read） ==========
+async def select_all():
+    """查询所有部门"""
+    async with AsyncSessionLocal() as session:
+        # 查询语句
+        stmt = select(Department)
+        # 异步执行 SQL，返回一个 Result 对象。
+        result = await session.execute(stmt)
+        # result	原始结果集（类似元组的集合）
+        # .scalars()	取第一列（对于 select(Department)，就是 Department 对象）
+        # .all()	转成列表，返回所有行
+        return result.scalars().all()
+async def select_by_id(did):
+    """按 ID 查询"""
+    async with AsyncSessionLocal() as session:
+        # 按主键查询单条记录。
+        return await session.get(Department, did)
+# ========== 6. 新增（Create） ==========
+async def insert(did, dname, note):
+    """新增部门"""
+    async with AsyncSessionLocal() as session:
+        try:
+            # 创建一个 ORM 对象（内存里，还没进库）
+            dept = Department(did=did, dname=dname, note=note)
+            session.add(dept)
+            await session.commit()
+            print(f"✅ 新增成功：did={did}")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ 新增失败：{e}")
+# ========== 7. 修改（Update） ==========
+async def update(did, dname):
+    """修改部门名"""
+    async with AsyncSessionLocal() as session:
+        try:
+            dept = await session.get(Department, did)
+            if dept:
+                dept.dname = dname
+                await session.commit()
+                print(f"✅ 修改成功：did={did}")
+            else:
+                print(f"⚠️ 部门 {did} 不存在")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ 修改失败：{e}")
+# ========== 8. 删除（Delete） ==========
+async def delete(did):
+    """删除部门"""
+    async with AsyncSessionLocal() as session:
+        try:
+            dept = await session.get(Department, did)
+            if dept:
+                await session.delete(dept)
+                await session.commit()
+                print(f"✅ 删除成功：did={did}")
+            else:
+                print(f"⚠️ 部门 {did} 不存在")
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ 删除失败：{e}")
+# ========== 9. 主流程 ==========
+async def main():
+    # 增
+    await insert(10, 'test', 'testtest')
+    await insert(11, 'dev', 'devteam')
+    # 查
+    print("\n--- 查询全部 ---")
+    for dept in await select_all():
+        print(dept)
+    # 改
+    await update(10, 'test-v2')
+    # 查单个
+    print("\n--- 查询 did=10 ---")
+    print(await select_by_id(10))
+    # 删
+    await delete(10)
+    await delete(11)
+    # 再查
+    print("\n--- 删除后全部 ---")
+    for dept in await select_all():
+        print(dept)
+if __name__ == '__main__':
+    asyncio.run(main())
+    # 启动异步事件循环，执行 main() 协程。
+    # 作用：创建事件循环、运行协程、关闭事件循环，一站式搞定。
+    # 执行步骤：
+        # 创建一个新的事件循环（EventLoop）。
+        # 把main()协程注册到事件循环。
+        # 运行main()，直到它返回。
+        # 关闭事件循环。
+```
+
+- 在 FastAPI 中，通常会像上面这样通过依赖注入来管理数据库会话的生命周期。
 
 ---
 

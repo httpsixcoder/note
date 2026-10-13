@@ -2632,6 +2632,14 @@ for t in threads:
 
 **Ctrl + Q**：快速文档（看函数说明）
 
+**Ctrl + Alt + L**：格式化代码
+
+**Ctrl + Alt + Shift + L**：格式化代码（弹出选项对话框
+
+**Ctrl + Alt + O**：优化导入
+
+**Ctrl + Alt + **I：自动缩进
+
 ------
 
 *持续更新中，欢迎指点。*
