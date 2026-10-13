@@ -20,6 +20,7 @@
 - [12. 事务](#12-事务)
 - [13. 用户与权限](#13-用户与权限)
 - [14. 核心定义与范式](#14-核心定义与范式)
+- [15.Python连接MySQL](#15-Python连接MySQL)
 
 ---
 
@@ -59,13 +60,14 @@
 
 ## 2. SQL 分类
 
-| 类型     | 全称                       | 语句                    |
-| :------- | :------------------------- | :---------------------- |
-| **DDL**  | Data Define Language       | create、alter、drop     |
-| **DML**  | Data Manipulation Language | insert、update、delete  |
-| **DQL**  | Data Query Language        | select                  |
-| **DCL**  | Data Control Language      | grant、commit、rollback |
-| **其他** | 命令                       | use、show、set          |
+| 类型     | 全称                         | 语句                        |
+| :------- | :--------------------------- | :-------------------------- |
+| **DDL**  | Data Define Language         | create、alter、drop         |
+| **DML**  | Data Manipulation Language   | insert、update、delete      |
+| **DQL**  | Data Query Language          | select                      |
+| **DCL**  | Data Control Language        | grant                       |
+| **TCL**  | Transaction Control Language | COMMIT、ROLLBACK、SAVEPOINT |
+| **其他** | 命令                         | use、show、set              |
 
 | 命令                                      | 作用                          |
 | ----------------------------------------- | ----------------------------- |
@@ -109,7 +111,8 @@ show create database 库名;
 -- 修改编码
 alter database 库名 character set 字符集 collate 校对规则;
 -- 修改库名
-alter database xxx
+-- MySQL 不支持 ALTER DATABASE ... RENAME 来重命名数据库。
+-- alter database xxx
 
 -- 使用
 use 库名;
@@ -183,7 +186,7 @@ insert into 表名 values(值1,值2,...),(值1,值2,...);
 insert into 表名(字段1,字段2) values(值1,值2),(值1,值2);
 
 -- 复制数据
-insert into 表名 (select * from 旧表 where 条件);
+insert into 表名 select * from 旧表 where 条件;
 ```
 
 ### 4.2 删除
@@ -427,6 +430,8 @@ select salary + salary * ifnull(commission_pct, 0) from t_employee;
 | `timestamp` | YYYY-MM-DD HH:MM:SS | 时区转换，范围 1970~2038【受时区影响】 |
 
 select @@time_zone;	【打印时区】
+
+SELECT @@global.time_zone, @@session.time_zone;
 
 set time_zone ='+2:00' 	【修改时区】
 
@@ -831,7 +836,7 @@ create table department like t_department;
 
 ```sql
 -- 使用insert语句+子查询，复制数据，此时insert不用写values
-insert into department (select * from t_department where did<=3);
+insert into department select * from t_department where did<=3;
 ```
 
 #### 	3.同时复制表结构和记录
@@ -956,7 +961,7 @@ alter table 表名 drop primary key;
 
 **特点**：唯一且非空，一个表只能有一个主键。
 
-开辟单独的物理空间来存储每一个主键的目录表（Btree结构）
+InnoDB 的主键是**聚簇索引**，数据行直接存储在 B+ 树叶子节点上
 
 ### 11.5 自增约束
 
@@ -1106,6 +1111,12 @@ commit;   -- 或 rollback;
 ```sql
 -- 修改隔离级别
 set transaction_isolation = '隔离级别';
+-- 【只读系统变量，修改前提】
+-- 方式一：设置当前会话
+SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED;
+-- 方式二：设置全局（影响新连接）
+SET GLOBAL TRANSACTION ISOLATION LEVEL READ COMMITTED;
+
 -- 修改当前会话的隔离级别
 set session transaction isolation level read committed;
 -- 修改全局隔离级别（影响新连接）
@@ -1220,7 +1231,7 @@ net stop mysql80
 ALTER USER 'root'@'localhost' IDENTIFIED BY '123456';
 
 # 3. 初始化启动（按 Ctrl+C 结束）
-mysqld --defaults-file="MySQL安装路径\my.ini" --init-file="d:\root_newpasswd.txt"
+mysqld --defaults-file="C:/ProgramData/MySQL/MySQL Server 8.0/my.ini" --init-file="D:/root_newpasswd.txt"
 
 # 4. 重启 MySQL，用新密码登录
 ```
@@ -1796,3 +1807,4 @@ if __name__ == '__main__':
 ---
 
 *本文档为速查手册，仅保留核心代码与关键定义。*
+
