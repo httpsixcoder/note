@@ -1,0 +1,66 @@
+# 核心功能：一键启动MySQL容器+Python应用容器，实现容器间通信、数据持久化
+# 配置多容器
+services:
+  # 容器1：MySQL服务容器（命名为mysql-db，容器间可通过该名称访问）
+  mysql-db:
+    # 基础镜像：指定MySQL 8.0.45版本（稳定性高，适配Python连接）
+    image: mysql:8.0.45
+    # 重启策略：容器意外关闭/服务器重启时，自动重启（保证服务可用性）
+    restart: always
+    # 环境变量：配置MySQL核心参数（无需手动进入容器修改）
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456" # root用户密码（自定义，Python连接需一致）
+      MYSQL_DATABASE: "test_db" # 自动创建初始数据库（无需手动建库）
+      # 字符编码配置：适配MySQL 8.0+，避免中文乱码/连接报错
+      MYSQL_INITDB_ARGS: "--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci"
+    # 端口映射：本地9999端口 → 容器内3306端口（避免与本地MySQL端口冲突）
+    ports:
+      - "9999:3306"
+    # 数据卷挂载：Windows本地D盘mysql-data目录 → 容器内MySQL数据目录（持久化数据）
+    volumes:
+      - D:/mysql-data:/var/lib/mysql
+    # 加入自定义网络：与Python容器互通（容器间通信的基础）
+    networks:
+      - app-network
+    # 健康检查：判断MySQL服务是否真正就绪（而非仅容器启动），解决连接拒绝问题
+    healthcheck:
+      test: [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-uroot",
+          "-p123456",
+        ] # 检测MySQL是否可ping通
+      interval: 3s # 每3秒检查一次
+      timeout: 3s # 单次检查超时时间3秒
+      retries: 10 # 最多重试10次（覆盖MySQL启动初始化时间）
+      start_period: 5s # 容器启动后，延迟5秒再开始检查（避免过早检测）
+
+  # 容器2：Python应用容器（命名为python-app，业务代码运行载体）
+  python-app:
+    # 构建规则：基于当前目录下的Dockerfile，构建自定义Python镜像
+    build: .
+    # 依赖条件：等待mysql-db容器的健康检查通过后，再启动本容器（核心修复：解决MySQL未就绪问题）
+    depends_on:
+      mysql-db:
+        condition: service_healthy # 仅当MySQL服务就绪时，才启动Python容器
+    # 环境变量：传递MySQL连接信息（Python代码可通过os.getenv获取，无需硬编码）
+    environment:
+      MYSQL_HOST: "mysql-db" # 容器间通信地址：直接填MySQL容器名（无需IP）
+      MYSQL_PORT: "3306" # MySQL容器内端口（非本地9999）
+      MYSQL_USER: "root" # 与MySQL容器的用户名一致
+      MYSQL_PASSWORD: "123456" # 与MySQL容器的密码一致（修改需同步）
+      MYSQL_DB: "test_db" # 与MySQL容器自动创建的数据库名一致
+    # 加入自定义网络：与MySQL容器在同一网络，才能通信
+    networks:
+      - app-network
+
+# 自定义网络：桥接模式（Docker默认），保证两个容器相互可见、可访问
+networks:
+  app-network:
+    driver: bridge
+
+
+# 改两个地方

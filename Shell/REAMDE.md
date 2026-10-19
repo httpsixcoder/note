@@ -522,7 +522,23 @@ done
 echo $sum     # 5050
 ```
 
-### **3）基本语法2**：
+**for循环中常用的多个值：**
+
+**{1..100}		1-100**
+
+**{1..100..2}		1-100，步长2**
+
+**seq 1 100		1-100**
+
+**seq 1 2 100		1-100，步长2**
+
+**注意**：
+
+**$()优先执行命令**
+
+**${}引用变量**
+
+### 3）基本语法2：
 
 ```bash
 for 变量 in 值1 值2 值3
@@ -719,12 +735,16 @@ cut [选项参数] filename
 
 **3）案例实操**：略。
 
-## 2 awk
+cut -d " " -f3 cut_test.txt 		第三列内容
+
+cut -d " " -f2- cut_test.txt		第二列及以后的
+
+## 2 awk⭐
 
 **1）基本用法**：
 
 ```bash
-awk [选项参数] '/pattern1/{action1} /pattern2/{action2}...' filename
+awk [选项参数] 'BEGIN{初始操作} /pattern1/{action1} /pattern2/{action2}... BND{最终操作}' filename
 ```
 
 - `pattern`：表示 awk 在数据中查找的内容，就是匹配模式。

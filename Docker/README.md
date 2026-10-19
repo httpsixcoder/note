@@ -2,7 +2,7 @@
 
 > 📢 **学习声明**：本笔记的知识体系、大纲脉络与案例演示，**学习课程源于尚硅谷 (Atguigu) 的 Docker 课程**。在此特别感谢尚硅谷老师的悉心教导，本仓库仅为个人学习过程中的知识点梳理、踩坑记录与心得沉淀。
 
-这里记录了我学习 Docker 过程中的知识点梳理、踩坑记录与心得。欢迎各位前辈和大神交流指正！
+这里记录了我学习 Docker 过程中的知识点梳理、踩坑记录与心得。欢迎各位前辈和大神交流指正！⭐
 
 ## 📖 目录
 - [1.Docker 概述与环境搭建](#1.docker概述与环境搭建)
@@ -407,14 +407,14 @@ networks:
   app-net:
 ```
 
-## 4. 常用命令
+## 4. 常用命令⭐
 
 | 命令                              | 作用           |
 | --------------------------------- | -------------- |
-| `docker compose up -d`            | 启动所有服务   |
-| `docker compose down`             | 停止并删除容器 |
-| `docker compose ps`               | 查看服务状态   |
-| `docker compose logs -f`          | 查看日志       |
+| `docker compose up -d`⭐           | 启动所有服务   |
+| `docker compose down`⭐            | 停止并删除容器 |
+| `docker compose ps`⭐              | 查看服务状态   |
+| `docker compose logs -f`⭐         | 查看日志       |
 | `docker compose restart`          | 重启服务       |
 | `docker compose build`            | 重新构建镜像   |
 | `docker compose pull`             | 拉取最新镜像   |
@@ -432,6 +432,16 @@ networks:
 | `depends_on`  | 依赖关系                   |
 | `networks`    | 网络                       |
 | `restart`     | 重启策略                   |
+
+## 6.Ubuntu 离线导入镜像【离线测试】⭐
+
+打包MySQL镜像为tar文件（存到项目目录下）
+
+docker save mysql:8.0.45 -o ./mysql-8.0.45.tar
+
+导入MySQL镜像（离线，无需联网）
+
+docker load -i ./mysql-8.0.45.tar
 
 ------
 
