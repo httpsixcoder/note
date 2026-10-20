@@ -119,6 +119,56 @@ def test_param_body(user_info: UserInFo):
 *   项目变大时，不要把所有代码塞进 `main.py`。
 *   使用 `APIRouter` 将不同模块拆分为 `routers/user.py`、`routers/item.py`，在主 `main.py` 中使用 `app.include_router(user.router)` 挂载。
 
+查看自动文档：http://127.0.0.1:8000/docs，可看到路由按 tags 分类（用户管理、商品管理）。
+
+```python
+from fastapi import APIRouter  # 实例化一个 APIRouter，可指定前缀（所有路由自动加上 /users）
+router = APIRouter(
+    prefix="/users",
+    tags=["用户管理"]  # 文档中归类为「用户管理」
+)
+@router.get("/")
+def get_all_users():
+    return {"message": "获取所有用户列表"}
+@router.get("/{user_id}")
+def get_user(user_id: int):
+    return {"message": f"获取 ID 为 {user_id} 的用户信息"}
+
+from fastapi import APIRouter
+router = APIRouter(
+    prefix="/items",
+    tags=["商品管理"]
+)
+@router.get("/")
+def get_all_items():
+    return {"message": "获取所有商品列表"}
+@router.get("/{item_id}")
+def get_item(item_id: int):
+    return {"message": f"获取 ID 为 {item_id} 的商品信息"}
+
+from fastapi import FastAPI
+from routers import user, item  # 导入子模块路由
+import uvicorn
+
+app = FastAPI(title="路由分发示例")
+# 挂载用户路由：所有 /users 开头的请求由 user.router 处理
+app.include_router(user.router)
+# 挂载商品路由：所有 /items 开头的请求由 item.router 处理
+app.include_router(item.router)
+# 主应用自身也可以定义路由
+@app.get("/")
+def root():
+    return {"message": "欢迎访问主页面"}
+if __name__ == "__main__":
+    # 直接在代码中启动uvicorn服务器
+    uvicorn.run(
+        app="main:app",       # 指定要运行的FastAPI应用实例
+        host="0.0.0.0",  # 允许外部访问（本地可通过127.0.0.1或localhost访问）
+        port=8000,     # 端口号
+        reload=True    # 开发模式：代码修改后自动重启（生产环境需去掉）
+    )
+```
+
 ### 5.启动uvicorn服务器
 
 - 命令启动：uvicorn python文件名：FastAPI核心对象名 --prot 端口号 --reload
@@ -141,29 +191,450 @@ uvicorn.run(
 
 ORM（对象关系映射）让你用“操作类”代替“写 SQL”。
 
-### 1. 核心组件架构
-*   **Engine（引擎）**：管理数据库连接池的入口。
-*   **Base（基类）**：所有模型类继承它，管理表结构。
-*   **Session（会话）**：执行增删改查的操作台。
+### 1. 基本架构
+
+#### 	1.DBAPI（数据库通信层）
+
+DBAPI（Database API）是Python数据库接口规范，是SQLAlchemy与底层数据库通信的 “桥梁”。SQLAlchemy 通过适配这些 DBAPI，实现对多种数据库的兼容。
+
+#### 	2.SQLAlchemy Core（核心层）
+
+Core是SQLAlchemy的 “基础工具集”，提供了SQL表达式语言、数据库连接管理等核心能力，即使不使用 ORM，也能通过 Core 操作数据库。
+
+- Schema / Types：定义数据库的模式（Schema）和数据类型（Types）。
+
+- SQL Expression Language：用Python代码生成SQL语句的 “表达式语言”。
+
+- Engine：管理数据库连接的 “引擎”，是与数据库交互的 “入口”。
+
+- Connection Pooling：管理数据库连接池，提升数据库操作性能。
+
+- Dialect：处理 “方言” 差异，适配不同数据库的 SQL 语法和特性。
+
+    #### 3.SQLAlchemy ORM（对象关系映射层）
+
+本质是对Core的 “封装”，自动转换为Core能理解的 SQL 表达式通过，最终 Engine 执行
+
+#### 	4.核心组件
+
+- 引擎（Engine）：Engine 是与数据库的连接入口，负责管理连接池和执行 SQL 语句。
+- 基类（Base）：所有 ORM 模型的父类，用于统一管理数据库表结构。
+- 会话（Session）：用于执行数据库操作的会话对象，负责暂存、提交、回滚数据操作。
 
 ### 2. 快速起步
-1. **连接**：`create_engine("mysql+pymysql://user:pwd@host:port/db")`
-2. **基类**：`Base = declarative_base()`
-3. **会话工厂**：`SessionLocal = sessionmaker(bind=engine, autoflush=False)`
-4. **模型类**：
-    ```python
-    class User(Base):
-        __tablename__ = "users"
-        id = Column(Integer, primary_key=True)
-        name = Column(String(50))
-    ```
-5. **建表**：`Base.metadata.create_all(bind=engine)`（⚠️ 只创建不存在的表，不会自动修改已有表结构）。
+
+​	环境准备：
+
+```bash
+# 安装 SQLAlchemy 核心库
+pip install sqlalchemy
+# 安装 MySQL 驱动（推荐 pymysql，兼容 Python 3.x）
+pip install pymysql
+```
+
+​	基本案例：
+
+#### 1.**在base.py中定义Base基类**
+
+```python
+from sqlalchemy.ext.declarative import declarative_base
+# 生成基类，所有模型需继承该类
+Base = declarative_base()
+```
+
+#### 2.在models.py中定义ORM模型类（映射MySQL表）
+
+```python
+from sqlalchemy import Column, Integer, String, ForeignKey, Date
+from sqlalchemy.orm import relationship
+from demo.base import Base
+
+class Department(Base):
+    """部门模型（一对多：一个部门包含多个员工）"""
+    __tablename__ = "departments"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False, unique=True)  # 部门名称
+    location = Column(String(100))  # 部门位置（如"北京总部"）
+    # 一对多关联员工：返回员工列表，显式指定外键（可选，但更清晰）
+    employees = relationship(
+        "Employee",
+        back_populates="department",
+        # 可选：级联删除（删除部门时自动删除下属员工，根据业务选择）
+        # cascade="all, delete-orphan",
+        # 可选：懒加载策略，优化查询性能
+        lazy="selectin"
+    )
+class Employee(Base):
+    """员工模型（多对一：多个员工属于一个部门）"""
+    __tablename__ = "employees"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(50), nullable=False)  # 姓名
+    age = Column(Integer)  # 年龄
+    hire_date = Column(Date)  # 入职日期
+    #添加外键约束，绑定到departments.id
+    department_id = Column(
+        Integer,
+        ForeignKey("departments.id", ondelete="RESTRICT"),  # 禁止删除有员工的部门
+        nullable=False  # 员工必须归属一个部门（根据业务可改为True，允许无部门）
+    )
+    # 核心修正：多对一关联，指定uselist=False（返回单个部门对象）
+    department = relationship(
+        "Department",
+        back_populates="employees",
+        lazy="joined"  # 可选：立即加载部门数据，减少查询次数
+    )
+```
+
+#### 3.在database.py创建引擎以及会话
+
+```python
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# MySQL 连接格式：mysql+pymysql://用户名:密码@主机地址:端口/数据库名
+DATABASE_URL = "mysql+pymysql://root:123456@localhost:3306/fastapi_db"
+
+# 创建引擎（echo=True 会打印执行的 SQL，方便调试）
+engine = create_engine(
+    DATABASE_URL,
+    echo=True,  # 是否启用日志输出 开发环境启用，生产环境关闭
+    pool_pre_ping=True  # 连接前检查有效性，避免连接失效
+)
+
+# 创建会话工厂（绑定引擎）
+SessionLocal = sessionmaker(
+    autocommit=False,  # 关闭自动提交，需手动 commit()
+    bind=engine
+)
+```
+
+模型类对应MySQL中的表，类属性对应表字段，通过 Column 定义字段类型和约束。
+
+from sqlalchemy import Column, Integer, String, ForeignKey, Date
+
+from sqlalchemy.orm import relationship
+
+from demo.base import Base
+
+ 
+
+class Department(Base):
+
+​    """部门模型（一对多：一个部门包含多个员工）"""
+
+​    __tablename__ = "departments"
+
+ 
+
+​    id = Column(Integer, primary_key=True, autoincrement=True)
+
+​    name = Column(String(50), nullable=False, unique=True)  # 部门名称
+
+​    location = Column(String(100))  # 部门位置（如"北京总部"）
+
+ 
+
+​    \# 一对多关联员工：返回员工列表，显式指定外键（可选，但更清晰）
+
+​    employees = relationship(
+
+​        "Employee",
+
+​        back_populates="department",
+
+​        \# 可选：级联删除（删除部门时自动删除下属员工，根据业务选择）
+
+​        \# cascade="all, delete-orphan",
+
+​        \# 可选：懒加载策略，优化查询性能
+
+​        lazy="selectin"
+
+​    )
+
+ 
+
+class Employee(Base):
+
+​    """员工模型（多对一：多个员工属于一个部门）"""
+
+​    __tablename__ = "employees"
+
+ 
+
+​    id = Column(Integer, primary_key=True, autoincrement=True)
+
+​    name = Column(String(50), nullable=False)  # 姓名
+
+​    age = Column(Integer)  # 年龄
+
+​    hire_date = Column(Date)  # 入职日期
+
+ 
+
+​    \#添加外键约束，绑定到departments.id
+
+​    department_id = Column(
+
+​        Integer,
+
+​        ForeignKey("departments.id", ondelete="RESTRICT"),  # 禁止删除有员工的部门
+
+​        nullable=False  # 员工必须归属一个部门（根据业务可改为True，允许无部门）
+
+​    )
+
+ 
+
+​    \# 核心修正：多对一关联，指定uselist=False（返回单个部门对象）
+
+​    department = relationship(
+
+​        "Department",
+
+​        back_populates="employees",
+
+​        lazy="joined"  # 可选：立即加载部门数据，减少查询次数
+
+​    )
+
+字段约束说明：
+
+Ø primary_key=True：设为主键。
+
+Ø autoincrement=True：MySQL 自增（仅整数类型可用）。
+
+Ø unique=True：唯一索引，避免重复值。
+
+Ø nullable=False：非空约束（字段必须有值）。
+
+#### 4.在main.py中提供建表方法
+
+```python
+from demo.base import Base
+from demo.database import engine
+from demo.models import Employee,Department #必须要加
+
+# 创建表
+def create_table():
+    print("注册的表名:", Base.metadata.tables.keys())
+    # 创建所有模型对应的表
+    Base.metadata.create_all(bind=engine)
+    print("表创建成功")
+
+if __name__ == '__main__':
+    create_table()
+```
+
+### 整体代码流程解析:
+
+- 调用 `declarative_base()` 创建了一个基类 `Base`。
+
+- 继承 `Base` 定义了 `Department`（部门）和 `Employee`（员工）两个类。
+- 使用 `create_engine` 根据 `DATABASE_URL` 创建了数据库引擎（管理连接池）。
+- 建表：`Base.metadata.create_all(bind=engine)`（⚠️ 只创建不存在的表，不会自动修改已有表结构）。
+- 导入所有的模型类（后续使用）。
+
+| 方法                                                         | 参数                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `declarative_base()`：生成一个 ORM 基类。                    | ⭐新版本：class Base(DeclarativeBase): pass                   |
+| `Column()`：定义表中的一列（字段）。                         | `default`：默认值。                                          |
+|                                                              | `primary_key`：是否为主键。                                  |
+|                                                              | `autoincrement`：是否自增。                                  |
+|                                                              | `nullable`：是否允许为空（默认 True）。                      |
+|                                                              | `unique`：是否唯一。                                         |
+| `ForeignKey()`：声明外键。                                   | `目标列`（如 `"departments.id"`）：必须用 `表名.列名` 的字符串格式。 |
+|                                                              | `ondelete`：级联删除策略。`"RESTRICT"` 表示如果部门下有员工，数据库将拒绝删除该部门（防误删神器）。 |
+| `relationship()`:不改变数据库物理结构，只在 Python 代码层面建立对象之间的引用。 | `目标类`（如 `"Employee"`）：用字符串防止类加载顺序报错。    |
+|                                                              | `back_populates`：双向绑定的属性名（比如 `Employee` 里的 `department` 属性）。 |
+|                                                              | `lazy`：懒加载策略。`selectin`（一对多最优）、`joined`（多对一最优）。 |
+|                                                              | `cascade`：ORM 层的级联（例如 `"all, delete-orphan"` 删主表时自动删子表，慎用）。 |
+| `create_engine()`：创建一个数据库引擎实例。                  | `DATABASE_URL`：数据库连接字符串。                           |
+|                                                              | `echo=True`：是否打印底层执行的 SQL，开发环境强烈建议开启，生产环境关闭。 |
+|                                                              | `pool_pre_ping=True`：每次从池里拿连接前，检查是否存活（防止 MySQL 8小时断开导致程序崩溃）。 |
+|                                                              | `pool_size`：连接池常驻连接数（默认5）。                     |
+|                                                              | `max_overflow`：连接池满了之后允许额外创建的连接数（默认10）。 |
+| `sessionmaker()`：生成一个会话工厂（Class），而不是一个具体的会话（Instance）。 | `bind=engine`：把工厂绑定到具体的数据库引擎上。              |
+|                                                              | `autocommit=False`：关闭自动提交（极其重要，必须由开发者手动调用 `session.commit()`，防止数据写乱）。 |
+|                                                              | `autoflush=False`：关闭自动刷新，通常在 FastAPI 中设为 False 以便更好地控制事务。 |
+| `Base.metadata.create_all()`：读取基类 `Base` 中注册的所有表，并生成 SQL 语句在数据库中创建。 | `bind=engine`：指定在哪个数据库里建表。                      |
+|                                                              | `checkfirst=True`（默认值）：建表前先检查，如果表已存在则跳过。 |
 
 ### 3. 增删改查 (CRUD) 速查
+
 *   **增**：`db.add(obj)` / `db.add_all([obj1, obj2])` 然后 `db.commit()`，需 `db.refresh(obj)` 获取自增 ID。
 *   **查**：`db.query(User).filter(User.age > 18).all()`，或按主键查 `db.get(User, 1)`。
 *   **改**：查出对象 -> 直接改属性（`user.age = 20`） -> `db.commit()`。
 *   **删**：查出对象 -> `db.delete(user)` -> `db.commit()`。
+
+```python
+#---------------新增数据（Create）
+def insert_data():
+    # 获取数据库会话
+    db = SessionLocal()
+    try:
+        # =========== 第一步：新增部门 =============
+        new_dept = Department(
+            name="研发部",  # 部门名称（唯一）
+            location="北京总部"  # 部门位置
+        )
+        db.add(new_dept)  # 将部门对象加入会话
+        db.commit()  # 提交到数据库（执行 INSERT 语句）
+        db.refresh(new_dept)  # 刷新对象，获取自增的 id 等字段
+        # =========== 第二步：新增关联的员工 ===========
+        # 员工1：关联上面创建的研发部
+        emp1 = Employee(
+            name="张三",
+            age=30,
+            hire_date=date(2023, 1, 1),  # 入职日期（datetime.date 类型）
+            department_id=new_dept.id  # 关联部门 ID（外键）
+        )
+        # 员工2：同部门的另一个员工
+        emp2 = Employee(
+            name="李四",
+            age=28,
+            hire_date=date(2023, 3, 15),
+            department_id=new_dept.id
+        )
+        # 批量添加员工（也可逐个 add）
+        db.add_all([emp1, emp2])
+        db.commit()  # 提交员工数据
+        # 刷新员工对象，获取自增 ID
+        db.refresh(emp1)
+        db.refresh(emp2)
+        # ===================== 输出结果 =====================
+        print(f"新增部门：ID={new_dept.id}，名称={new_dept.name}，位置={new_dept.location}")
+        print(f"新增员工1：ID={emp1.id}，姓名={emp1.name}，所属部门={new_dept.name}")
+        print(f"新增员工2：ID={emp2.id}，姓名={emp2.name}，所属部门={new_dept.name}")
+        # 验证关联关系（通过 ORM 关联查询）
+        print("\n【验证关联关系】")
+        # 从员工查部门
+        print(f"员工{emp1.name}的部门名称：{emp1.department.name}")
+        # 从部门查员工
+        dept_employees = new_dept.employees
+        print(f"部门{new_dept.name}的员工列表：{[emp.name for emp in dept_employees]}")
+    except Exception as e:
+        db.rollback()  # 出错时回滚
+        print(f"新增失败：{e}")
+    finally:
+        db.close()  # 关闭会话
+#---------------删除数据（Delete）
+def delete_data():
+    # 获取会话
+    session = SessionLocal()
+    try:
+        # 删除单个员工
+        emp = session.query(Employee).filter(Employee.name == "李四").first()
+        if emp:
+            session.delete(emp)
+            session.commit()
+            print(f"已删除员工：{emp.name}")
+    except Exception as e:
+        session.rollback()  # 出错时回滚
+        print(f"刪除失败：{e}")
+    finally:
+        session.close()  # 关闭会话
+#---------------修改数据（Update）
+def update_data():
+    # 获取会话
+    session = SessionLocal()
+    try:
+        # 修改员工年龄
+        emp = session.query(Employee).filter(Employee.name == "张三").first()
+        if emp:
+            emp.age = 31  # 直接修改属性
+            session.commit()  # 提交更新
+            print(f"修改后 {emp.name} 的年龄：{emp.age}")
+    except Exception as e:
+        session.rollback()  # 出错时回滚
+        print(f"修改失败：{e}")
+    finally:
+        session.close()  # 关闭会话
+#---------------查询数据（Read）
+def read_data():
+    # 获取会话
+    session = SessionLocal()
+    try:
+        # ======按主键查询 get========
+        #  查询id=1的部门
+        dept = session.get(Department,1) 
+        print(f"部门 ID=1：{dept.name}（{dept.location}）")
+        # ======过滤（filter）查询========
+        # 查询研发部的所有员工
+        rd_employees = session.query(Employee).filter(
+            Employee.department_id == 1  # 按部门ID过滤
+        ).all()
+        print("研发部员工：", [emp.name for emp in rd_employees])  # 输出：['张三']
+        # 查询年龄>30的员工
+        old_employees = session.query(Employee).filter(Employee.age > 30).all()
+        print("年龄>30的员工：", [emp.name for emp in old_employees]) # 输出：['张三', '王五']
+        # ======逻辑运算（and_/or_）查询========
+        from sqlalchemy import and_, or_
+        # 年龄30-40且属于研发部的员工（and_）
+        emp = session.query(Employee).filter(
+            and_(Employee.age.between(30, 40), Employee.department_id == 1)
+        ).first()
+        print("符合条件的员工：", emp.name)  # 输出：张三
+        # 属于市场部或年龄>32的员工（or_）
+        emps = session.query(Employee).filter(
+            or_(Employee.department_id == 2, Employee.age > 32)
+        ).all()
+        print("符合条件的员工：", [emp.name for emp in emps])  # 输出：['张三', '王五']
+        # ======表连接（join）查询========
+        # 内连接：查询员工及其所属部门名称
+        # 语法：query(主表, 关联表).join(关联表, 连接条件)
+        result = session.query(Employee, Department).join(
+            Department, Employee.department_id == Department.id
+        ).all()
+        for emp, dept in result:
+            print(f"员工 {emp.name} 属于 {dept.name}")
+        # 输出：
+        # 员工 张三 属于 研发部
+        # 员工 王五 属于 市场部
+        # ======预加载关联数据（joinedload）查询========
+        from sqlalchemy.orm import joinedload
+        # 加载员工时同时加载部门信息（避免多次查询）
+        employees = session.query(Employee).options(
+            joinedload(Employee.department)  # 预加载关联的 department
+        ).all()
+        # 直接访问关联数据，不会触发新查询
+        for emp in employees:
+            print(f"{emp.name} 的部门：{emp.department.name}")
+        # 输出：
+        # 张三 的部门：研发部
+        # 王五 的部门：市场部
+        # ======子查询（subquery）========
+        from sqlalchemy import func
+        #子查询：统计每个部门的员工数，再查询员工数>0的部门
+        # 步骤1：创建子查询（统计部门员工数）
+        dept_emp_count = session.query(
+            Employee.department_id,
+            func.count(Employee.id).label("count")  # 别名 count
+        ).group_by(Employee.department_id).subquery()  # 转为子查询
+        # 步骤2：主查询（关联子查询结果）
+        depts = session.query(Department).join(
+            dept_emp_count, Department.id == dept_emp_count.c.department_id
+        ).filter(dept_emp_count.c.count > 0).all()  # 筛选员工数>0的部门
+        print("有员工的部门：", [dept.name for dept in depts])  # 输出：['研发部', '市场部']
+        # ======去重（distinct）========
+        # 查询所有有员工的部门位置（去重）
+        locations = session.query(Department.location).join(
+            Employee
+        ).distinct().all()  # distinct() 去重
+        print("部门位置：", [loc[0] for loc in locations])  # 输出：['北京', '广州']
+        # ======结果获取（first/all）========
+        # first()：返回第一条结果（适合唯一查询）
+        first_emp = session.query(Employee).first()
+        print("第一个员工：", first_emp.name)  # 输出：张三
+        # all()：返回所有结果（列表）
+        all_depts = session.query(Department).all()
+        print("所有部门：", [dept.name for dept in all_depts])  # 输出：['研发部', '市场部']
+    except Exception as e:
+        session.rollback()  # 出错时回滚
+        print(f"查询失败：{e}")
+    finally:
+        session.close()  # 关闭会话
+```
 
 ---
 
@@ -348,6 +819,214 @@ async def get_db():
 ### 💡 核心变动的底层原因
 
 旧版笔记混用了“普通 `def` 配合线程池”与“`async def` 配合事件循环”两套体系。当前的主流方案是**全链路异步（Full Async）**——从 FastAPI 路由、SQLAlchemy Session 到数据库驱动，全程保持协程状态。这样不仅彻底绕开了 Python 的全局解释器锁（GIL）和线程池上限限制，还能在处理海量并发请求时显著降低内存开销与上下文切换成本。如果项目正在起步，建议直接按照上述新范式来搭建脚手架。
+
+# ⭐新版案例
+
+技术栈：**现代技术栈（FastAPI + SQLAlchemy 2.0 + Pydantic v2 + 全异步）**
+
+## 1.database.py
+
+```python
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+
+from MySQL.test import AsyncSessionLocal
+
+# 1. 数据库连接 URL
+# 如果要用你本地的 MySQL，请取消下面这行的注释（注意需要 pip install asyncmy）
+DATABASE_URL = "mysql+asyncmy://root:admin@localhost:3306/new_fastapi_db"
+
+# 2. 创建异步引擎
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True
+)
+# 3. 创建异步会话工厂
+# expire_on_commit=False 极其重要！异步环境下如果不加，commit后访问对象属性会触发隐式I/O报错
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSessionLocal,
+    expire_on_commit=False
+)
+
+
+# 4. FastAPI 依赖注入函数（获取数据库会话）
+async def get_db():
+    # async with 自动处理会话的关闭，即使接口内部报错也会安全释放
+    async with AsyncSessionLocal() as session:
+        yield session
+
+```
+
+## 2.models.py
+
+```python
+from typing import List
+
+from sqlalchemy import String, ForeignKey
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+# 1. 定义基类（代替旧的 declarative_base()）
+class Base(DeclarativeBase):
+    pass
+
+
+class Department(Base):
+    __tablename__ = "departments"
+    # 2. 使用 Mapped 和 mapped_column（强类型）
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50), unique=True)
+
+    # 3. 一对多关系：lazy="selectin" 是异步 FastAPI 解决 N+1 问题的标配
+    employees: Mapped[List["Employee"]] = relationship(
+        back_populates="department",
+        lazy="selectin",
+    )
+
+
+class Employee(Base):
+    __tablename__ = "employees"
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(50))
+    age: Mapped[int | None] = mapped_column(default=None)
+    # 外键
+    department_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "departments.id",
+            ondelete="CASCADE"
+        )
+    )
+
+    department: Mapped["Department"] = relationship(
+        back_populates="employees",
+        lazy="joined",
+    )
+
+```
+
+## 3.schemas.py
+
+```python
+from typing import Optional, List
+
+from pydantic import BaseModel, ConfigDict
+
+
+# ================= 输入模型 (Request Body) =================
+class EmployeeCreate(BaseModel):
+    name: str
+    age: Optional[int] = None
+
+
+class DepartmentCreate(BaseModel):
+    name: str
+    employees: List[EmployeeCreate] = []  # 支持创建部门时一并创建员工
+
+
+# ================= 输出模型 (Response Body) =================
+class EmployeeResponse(BaseModel):
+    id: int
+    name: str
+    age: Optional[int]
+
+    # Pydantic v2 新语法：允许从 ORM 对象属性中读取数据
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DepartmentResponse(BaseModel):
+    id: int
+    name: str
+    # 嵌套员工响应（⚠️ 注意不要在 EmployeeResponse 里嵌 Department，否则会无限递归报错）
+    department: List[DepartmentCreate] = []
+    model_config = ConfigDict(from_attributes=True)
+
+```
+
+## 4.main.py
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+import uvicorn
+
+from database import engine, get_db
+from models import Base, Department, Employee
+from schemas import DepartmentCreate, DepartmentResponse
+
+
+# ================= 应用生命周期管理 =================
+# 在应用启动时自动创建表（仅限开发环境，生产环境推荐用 Alembic）
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        # 运行同步的 create_all
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    # 应用关闭时可在此处释放连接池
+    await engine.dispose()
+
+
+app = FastAPI(title="现代化 FastAPI + SQLAlchemy 2.0", lifespan=lifespan)
+
+
+# ================= 接口 1：新增部门（级联新增员工） =================
+@app.post("/departments/", response_model=DepartmentResponse)
+async def create_department(dept_in: DepartmentCreate, db: AsyncSession = Depends(get_db)):
+    # 1. 构造 ORM 对象
+    # 因为模型中配置了双向关系，Pydantic 传入的员工列表可以直接赋给 employees 属性
+    new_dept = Department(
+        name=dept_in.name,
+        employees=[Employee(name=emp.name, age=emp.age) for emp in dept_in.employees]
+    )
+
+    # 2. 写入数据库
+    db.add(new_dept)
+    await db.commit()  # 异步提交
+    await db.refresh(new_dept)  # 获取生成的自增 ID
+
+    return new_dept
+
+
+# ================= 接口 2：根据 ID 查询部门（包含员工列表） =================
+@app.get("/departments/{dept_id}", response_model=DepartmentResponse)
+async def get_department(dept_id: int, db: AsyncSession = Depends(get_db)):
+    # 现代查询语法：select() + await execute()
+    stmt = select(Department).where(Department.id == dept_id)
+    result = await db.execute(stmt)
+
+    # .scalars().first() 提取单个对象
+    department = result.scalars().first()
+
+    if not department:
+        raise HTTPException(status_code=404, detail="部门不存在")
+
+    # 由于模型中配置了 lazy="selectin"，这里访问 department.employees 不会报错，且不会产生 N+1 查询
+    return department
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+```
+
+测试数据：
+
+```jso
+{
+  "name": "测试部门",
+  "employees": [
+    {
+      "name": "张三",
+      "age": 25
+    },
+    {
+      "name": "李四",
+      "age": 28
+    }
+  ]
+}
+```
 
 
 
