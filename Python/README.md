@@ -2669,6 +2669,8 @@ for t in threads:
 
 **按住 alt**：添加光标
 
+**按住 shift + alt**：矩形块选择（列选择）
+
 **Ctrl + Alt + T**：包围选中代码
 
 **Ctrl + Shift + V**：从剪贴板历史粘贴
@@ -2681,7 +2683,7 @@ for t in threads:
 
 **Ctrl + Alt + L**：格式化代码
 
-**Ctrl + Alt + Shift + L**：格式化代码（弹出选项对话框
+**Ctrl + Alt + Shift + L**：格式化代码（弹出选项对话框）
 
 **Ctrl + Alt + O**：优化导入
 
