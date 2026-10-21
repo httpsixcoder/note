@@ -19,3 +19,8 @@ Thumbs.db
 
 #忽略所有 .png 文件
 *.png
+
+# note中的忽略文件
+web/**/*.html
+web/**/*.css
+web/**/*.js

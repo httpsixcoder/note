@@ -29,9 +29,21 @@
     - 包含 Docker 概述与环境搭建、镜像与容器基础、Dockerfile 详解、数据卷与网络、Docker Compose、实战部署等知识点的详细笔记与实战案例。
     - 状态：Day01 （✅ 已完结）
 
-- 🚀 **[FastAPI 学习笔记与实战代码](./FastAPI/)**
+- 🚀 **[FastAPI&SQLAlchemy学习笔记与实战代码](./FastAPI&SQLAlchemy)**
     - 包含同步与异步函数的区别、路径参数与查询参数的路由顺序坑、Pydantic 请求体数据校验、APIRouter 路由分发，以及 Uvicorn 服务器的命令与代码启动方式等核心知识点。
-    - 状态：Day01（ 更新中）
+    - 状态：Day01-Day02（ ✅ 已完结）
+
+- 🌐 **[HTML](./web/HTML)**
+    - 包含 Web 客户端与服务器基础概念、技术体系划分、HTML&HTML5 基础语法、常用基础标签、图片、超链接、表格、div/span 块级行内元素、form 表单重点（input、select、GET 与 POST）、高频避坑总结；配套完整示例代码。 
+    - 状态：Day01（✅ 已完结）
+
+- 🎨  **[CSS](./web/CSS)**
+    - 包含 CSS 基础概念、三种引入方式、全套选择器、常用文本 / 背景 / 边框属性、盒子模型、浮动清除浮动、position 定位、CSS3 圆角 / 阴影、Flex 弹性布局、transition 过渡、transform 变换、keyframes 动画、开发避坑要点；配套实战示例。 
+    - 状态：Day01（✅ 已完结）
+
+- 📜 **[JS](./web/JS)**
+    - 包含 JS 语言介绍、三大组成 ECMAScript/BOM/DOM、脚本引入方式、输出语法、数据类型、var/let/const 变量、运算符、流程控制、数组、函数、BOM 浏览器对象、DOM 文档操作、页面事件、JSON 数据交换、正则表达式，大量实操案例与后端对接相关知识点。 
+    - 状态：Day01（✅ 已完结）
 
 ## 📖 学习进度
 
@@ -40,11 +52,12 @@
 - **Linux 基础阶段**：Day01 - Day02（✅已完结）
 - **Shell 基础阶段**：Day01（✅ 已完结）
 - **Docker 基础阶段**：Day01（✅ 已完结）
-- **FastAPI 基础阶段**：Day01（ 更新中）
+- **FastAPI&SQLAlchemy基础阶段**：Day01-Day02（✅ 已完结）
+- **前端基础阶段（HTML + CSS + JavaScript）**：Day01‑Day02（✅已完结）
 
 ## 🤝 交流与建议
 
-欢迎各位通过 `Issues` 提出宝贵建议，或者提交 `Pull Request` 共同交流进步。
+欢迎各位通过 `Issues` 提出宝贵建议，或者提交 `Pull Request` 共同交流进步。⭐⭐⭐
 
 ---
 *“不积跬步，无以至千里。”——与所有正在努力的开发者共勉。*
