@@ -67,8 +67,6 @@ if __name__ == '__main__':
     print(f"耗时{end_time - start_time:.2f}s")# 耗时2.01s
 ```
 
-
-
 ---
 
 ## 第二部分：FastAPI 核心操作
@@ -177,13 +175,39 @@ if __name__ == "__main__":
 
 ```python
 uvicorn.run(
-            app="fastapi_test:app",
-            # host="0.0.0.0", # 任何人都可以访问
-            host="127.0.0.1",
-            port=8000,
-            reload=True,
-        )
+	"fastapi_test:app",
+	# host="0.0.0.0", # 任何人都可以访问
+	host="127.0.0.1",
+	port=8000,
+    use_colors=True,    # 控制台彩色日志
+    # 开发环境
+	reload=True,
+    log_level="debug",  # 开发打开debug，看详细请求日志
+    # 生产环境
+    reload=False,
+	log_level="info",
+    # log_level控制控制台输出日志的最低等级(从啰嗦 → 安静排序)
+    # trace → debug → info → warning → error → critical
+)
 ```
+
+- 命令行启动
+
+```bash
+# 方式 1：uvicorn 命令行
+	# 本地开发，自动热更
+uvicorn fastapi_test:app --host 127.0.0.1 --port 8000 --reload
+	# 简单单进程生产（不适合高并发，仅临时测试）
+uvicorn fastapi_test:app --host 0.0.0.0 --port 8000 --worker 2
+	# `workers N`：多进程，充分利用多核 CPU；⚠️ workers 和 reload 不能同时开启
+# 方式 2：FastAPI 官方自带 `fastapi run`
+	# 开发（热重载）	`fastapi dev` = 开发模式（带 reload）；
+fastapi dev fastapi_test.py --host 127.0.0.1 --port 8000
+	# 生产			`fastapi run` = 生产模式（无 reload）
+fastapi run fastapi_test.py --host 0.0.0.0 --port 8000 --workers 4
+```
+
+
 
 ---
 
@@ -820,11 +844,38 @@ async def get_db():
 
 旧版笔记混用了“普通 `def` 配合线程池”与“`async def` 配合事件循环”两套体系。当前的主流方案是**全链路异步（Full Async）**——从 FastAPI 路由、SQLAlchemy Session 到数据库驱动，全程保持协程状态。这样不仅彻底绕开了 Python 的全局解释器锁（GIL）和线程池上限限制，还能在处理海量并发请求时显著降低内存开销与上下文切换成本。如果项目正在起步，建议直接按照上述新范式来搭建脚手架。
 
+### 参考目录
+
+```plaintxet
+project/
+├── main.py
+├── config.py          # 配置（pydantic-settings，读取环境变量）
+├── schemas/           # 入参、出参模型
+│   ├── __init__.py
+│   ├── user.py
+│   └── item.py
+├── routers/
+│   ├── __init__.py
+│   ├── user.py
+│   └── item.py
+├── common/            # 公共工具：异常、响应、日志
+│   ├── __init__.py
+│   ├── exceptions.py
+│   ├── response.py
+│   └── logger.py
+├── services/          # 业务层（路由只调用service，不写业务）
+│   ├── __init__.py
+│   ├── user_service.py
+│   └── item_service.py
+└── requirements.txt
+
+```
+
 # ⭐新版案例
 
-技术栈：**现代技术栈（FastAPI + SQLAlchemy 2.0 + Pydantic v2 + 全异步）**
+## 技术栈:(FastAPI + SQLAlchemy 2.0 + Pydantic v2 + 全异步)
 
-## 1.database.py
+### 1.database.py
 
 ```python
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -857,7 +908,7 @@ async def get_db():
 
 ```
 
-## 2.models.py
+### 2.models.py
 
 ```python
 from typing import List
@@ -904,7 +955,7 @@ class Employee(Base):
 
 ```
 
-## 3.schemas.py
+### 3.schemas.py
 
 ```python
 from typing import Optional, List
@@ -942,7 +993,7 @@ class DepartmentResponse(BaseModel):
 
 ```
 
-## 4.main.py
+### 4.main.py
 
 ```python
 from contextlib import asynccontextmanager
@@ -1026,6 +1077,126 @@ if __name__ == "__main__":
     }
   ]
 }
+```
+
+
+
+## 2.FastAPI 【anyio 版本（FastAPI 首选替代，推荐）】
+
+```python
+from asyncio import CancelledError
+import anyio
+# 用来控制最大并发数量
+sem = anyio.Semaphore(10)
+async def fetch_data(name, delay):
+    print(f"任务 {name} 开始")
+    await anyio.sleep(delay)
+    print(f"任务 {name} 完成")
+    return f"任务 {name} 结果"
+# 带并发限流 + 异常捕获的包装层
+async def run_limited(name, delay):
+    try:
+        # `async with` 是异步上下文管理器。进入的时候申请信号量许可，退出的时候自动释放许可。
+        async with sem:
+            return {"ok": True, "name": name, "data": await fetch_data(name, delay)}
+    except CancelledError:
+        # 单独捕获取消异常（超时、外部取消都会抛这个）
+        return {"ok": False, "name": name, "err": "任务被取消/全局超时"}
+    except Exception as e:
+        return {"ok": False, "name": name, "err": str(e)}
+# 顶级函数
+async def main():
+    results = []
+    # （任务组），结构化并发核心。主协程一定会等待所有子任务全部完成
+    async with anyio.create_task_group() as tg:
+        #  tg.start_soon
+        for i in range(20):
+            # 👉 经典闭包陷阱修复！
+            async def wrapper(idx=i):
+                r = await run_limited(f"Task-{idx}", 1)
+                results.append(r)
+            # 一次性把 20 个任务全部交给 TaskGroup 调度
+            tg.start_soon(wrapper)
+        # 正确写法：当前时间往后5.5秒截止
+        tg.cancel_scope.deadline = anyio.current_time() + 2.0
+    for mes in results:
+        print(mes)
+if __name__ == '__main__':
+    anyio.run(main)
+
+```
+
+## 3.路由分发
+
+```python
+#-----------------------------------------------------routers/user.py
+from fastapi import APIRouter, HTTPException
+router = APIRouter(
+    prefix="/users",
+    tags=["用户管理"],
+    # 这两个是进阶可选：这个路由组统一的响应、依赖
+    # responses={404: {"description": "Not found"}},
+    # dependencies=[...]
+)
+@router.get(
+    "/",
+    summary="获取全部用户",		# swagger文档（/docs）接口列表
+    description="返回用户列表",	# 接口详情里
+    # response_model=UserOut 
+    # `UserOut` 就是我们在 `schemas/user.py` 定义的 Pydantic BaseMode
+    # 作用：约束接口返回的数据结构，自动生成接口文档，自动序列化，过滤敏感字段
+)
+async def get_all_users():
+    # 这里后续可以放你的anyio并发、异步数据库查询
+    return {"message": "获取所有用户列表"}
+@router.get(
+    "/{user_id}",
+    summary="获取单个用户",
+)
+async def get_user(user_id: int):
+    # 业务示例：找不到抛404，这是规范写法，而不是只返回message
+    if user_id <= 0:
+        raise HTTPException(status_code=404, detail="用户不存在")
+    return {"message": f"获取 ID 为 {user_id} 的用户信息"}
+#-----------------------------------------------------routers/item.py
+from fastapi import APIRouter, HTTPException
+router = APIRouter(
+    prefix="/items",
+    tags=["商品管理"],
+)
+@router.get("/", summary="获取全部商品")
+async def get_all_items():
+    return {"message": "获取所有商品列表"}
+@router.get("/{item_id}", summary="获取单个商品")
+async def get_item(item_id: int):
+    if item_id <= 0:
+        raise HTTPException(status_code=404, detail="商品不存在")
+    return {"message": f"获取 ID 为 {item_id} 的商品信息"}
+#-----------------------------------------------------routers/__init__.py
+from .user import router as user_router
+from .item import router as item_router
+__all__ = ["user_router", "item_router"]
+#-----------------------------------------------------main.py
+from fastapi import FastAPI
+from routers import user_router, item_router
+
+app = FastAPI(
+    title="路由分发示例",
+    description="APIRouter模块化路由演示",
+    version="1.0.0"
+)
+# 挂载路由
+app.include_router(user_router)
+app.include_router(item_router)
+@app.get("/", summary="首页")
+async def root():
+    return {"message": "欢迎访问主页面"}
+#-----------------------------------------------------bash命令行启动
+# 开发
+fastapi dev main.py --host 127.0.0.1 --port 8000
+# 或者 uvicorn main:app --reload
+# 生产
+fastapi run main.py --host 0.0.0.0 --port 8000 --workers 2
 ```
 
 
