@@ -1004,7 +1004,7 @@ import uvicorn
 
 from database import engine, get_db
 from models import Base, Department, Employee
-from schemas import DepartmentCreate, DepartmentResponse
+from app import DepartmentCreate, DepartmentResponse
 
 
 # ================= 应用生命周期管理 =================
