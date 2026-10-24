@@ -666,6 +666,69 @@ power_of_two = partial(power, 2)
 print(power_of_two(10))  # 1024
 ```
 
+#### 7.`setattr(object, name, value)`
+
+**作用**：**通过“字符串”来动态地给对象设置属性。**底层调用的就是对象的 `__setattr__`方法。
+
+参数：
+
+- **object**：你要操作的对象（比如一个实例、一个类、甚至一个模块）。
+
+- **name**：属性的名称，必须是一个**字符串**（比如 `"name"`, `"age"`）。
+
+- **value**：你要赋予这个属性的值。
+
+```python
+# 这两行代码的作用是完全一模一样的
+emp.name = "张三"
+setattr(emp, "name", "张三")
+```
+
+**推荐场景**：
+
+- 1.动态属性赋值：假设字典，里面存了用户想修改的所有字段。不知道用户传哪些字段
+
+```python
+update_data = {"name": "李四", "age": 25, "role": "开发"}
+
+# 如果没有 setattr，你得这么写：
+# if "name" in update_data: emp.name = update_data["name"]
+# if "age" in update_data: emp.age = update_data["age"]
+
+# 有了 setattr，一个 for 循环直接搞定所有字段：
+for k, v in update_data.items():
+    setattr(emp, k, v)
+```
+
+- 2.操作未知的第三方对象：用户传给一个对象，要给这个对象打上一些标记
+
+```python
+def add_mark(user_obj):
+    # 给任何传入的对象动态加上 is_vip 属性
+    setattr(user_obj, "is_vip", True)
+```
+
+- 3.批量生成对象：测试或者做数据打桩（Mock）时，你有一批配置信息
+
+```python
+config_data = {"host": "localhost", "port": 3306, "db": "test"}
+
+class Config: pass
+cfg = Config()
+
+for key, value in config_data.items():
+    setattr(cfg, key, value)
+
+print(cfg.host) # localhost
+```
+
+**动态操作，Python 提供了四个“兄弟”函数**
+
+1. **setattr(obj, name, value)**：动态设置属性。
+2. **getattr(obj, name, default)**：动态获取属性。
+3. **hasattr(obj, name)**：动态判断对象是否有某个属性。返回 `True` 或 `False`。
+4. **delattr(obj, name)**：动态删除对象
+
 
 
 ### 9.函数注释	func.\_\_annotations\_\_ 查看
