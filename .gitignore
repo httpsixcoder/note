@@ -24,3 +24,37 @@ Thumbs.db
 web/**/*.html
 web/**/*.css
 web/**/*.js
+
+
+# ====================vite====================
+# 依赖包
+node_modules/
+.pnpm-store/
+# 打包产物
+dist/
+dist-ssr/
+*.local
+# 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+# 编辑器/IDE 配置文件
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# 系统缓存文件
+.DS_Store
+Thumbs.db
+# 测试覆盖率报告
+coverage/
+# 图片
+*.svg
