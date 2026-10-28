@@ -45,6 +45,10 @@
     - 包含 JS 语言介绍、三大组成 ECMAScript/BOM/DOM、脚本引入方式、输出语法、数据类型、var/let/const 变量、运算符、流程控制、数组、函数、BOM 浏览器对象、DOM 文档操作、页面事件、JSON 数据交换、正则表达式，大量实操案例与后端对接相关知识点。 
     - 状态：Day01（✅ 已完结）
 
+- 🦜 **[LangChain 核心应用与实战代码](./LangChain/)**
+    - 包含大模型生态接入（通义千问/OpenAI 兼容端点配置）、同步/异步/流式/批量等 6 种调用姿势（invoke/stream/batch）、消息管理（SystemMessage / HumanMessage）、提示词模板（ChatPromptTemplate）、结构化输出（JsonOutputParser / Pydantic 强校验）、LCEL 链式调用（管道符 `|`），以及异步生命周期管理（lifespan）与 API 密钥安全防护。
+    - 状态：Day01-Day03（✅ 进行中）
+
 ## 📖 学习进度
 
 - **Python 基础阶段**：Day01 - Day12（✅已完结）
@@ -54,6 +58,8 @@
 - **Docker 基础阶段**：Day01（✅ 已完结）
 - **FastAPI&SQLAlchemy基础阶段**：Day01-Day02（✅ 已完结）
 - **前端基础阶段（HTML + CSS + JavaScript）**：Day01‑Day02（✅已完结）
+- **LangChain 大模型开发**：Day01-Day03（进行中）
+
 
 ## 🤝 交流与建议
 
