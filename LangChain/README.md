@@ -219,15 +219,21 @@ msgs = prompt.invoke({"role": "法律顾问", "limit": 120, "question": ".."})
 ```python
 from pydantic import BaseModel, Field
 
-class Ticket(BaseModel):
-    """工单分类结果"""
-    category: str = Field(description="退款/物流/质量/其他 之一")
-    urgency: int = Field(ge=1, le=5, description="1=不急，5=紧急")
-    reason: str = Field(description="判断依据，30 字以内")
+class JieRiItem(BaseModel):
+    name: str = Field(description="节日名称")
+    description: str = Field(description="该节日的描述")
 
-structured = llm.with_structured_output(Ticket)
-t = structured.invoke("我买的鞋三天没发货，客服也不回")
-print(t.category, t.urgency)   # 拿到的是 Ticket 实例，不是字符串
+# 使用嵌套对象，将它们“绑”在一起。【推荐】
+class JieRi(BaseModel):
+    festivals: list[JieRiItem] = Field(description="节日和描述的结构化列表")
+
+# 返回一个JieRi对象而非Json      
+resp = llm.with_structured_output(schema=JieRi).invoke([
+    HumanMessage("查询一年中的重要节日，以及节日描述")
+])
+for item in resp.festivals:
+    print(item.name)
+    print(item.description)
 ```
 
 ```python
@@ -264,7 +270,7 @@ chain.invoke({"role": "顾问", "limit": 80, "question": "什么是向量检索�
 
 | 组件 | 作用 | 一句话示例 |
 |---|---|---|
-| `RunnableSequence` | 串行 | `a \| b` |
+| `RunnableSequence` | 串行 | `a | b` |
 | `RunnableParallel` | 并行，输出 dict | `{"ctx": retriever, "q": RunnablePassthrough()}` |
 | `RunnablePassthrough` | 原样透传 | 把用户问题同时送进检索和提示词 |
 | `RunnableLambda` | 把普通函数变成 Runnable | 格式化、清洗 |
@@ -288,10 +294,28 @@ rag = (
 )
 ```
 
+```python
+# 流水线：提示词 -> 大模型 -> 解析器（返回 Python 对象）
+# 等价于
+# chain =RunnableSequence([prompt_template,llm,JsonOutputParser()])
+chain = prompt_template | llm | JsonOutputParser()
+
+	# （底层是把这三个对象用 __or__ 魔法方法串联成了一个 RunnableSequence 对象）
+	# ⭐result = chain.invoke(data) 等价于
+	# prompt_value = prompt_template.invoke(data)  # 第一步：把字典塞进模板，得到 PromptValue
+	# ai_message = llm.invoke(prompt_value)        # 第二步：把提示词发给模型，得到 AIMessage
+	# result = StrOutputParser().invoke(ai_message) # 第三步：把 AIMessage 里的文本抽出来，得到 str
+# RAG（知识库检索）
+chain = retriever | prompt_template | llm | StrOutputParser()
+```
+
 ### 4.3 避坑
+
 1. **LCEL 不是必须**。写复杂分支时 LCEL 会变成"括号地狱"，直接写 Python 函数 + `create_agent`/LangGraph 更好。v1 已经把 chains 移出核心，就是在暗示这点。
 2. `RunnableParallel` 里若某一路抛异常，整条链失败 → 用 `.with_fallbacks()` 或包 `RunnableLambda` 做 try/except 返回空。
 3. 调试别猜：`chain.get_graph().print_ascii()` 看结构，`chain.invoke(..., config={"callbacks":[ConsoleCallbackHandler()]})` 看每步输入输出。
+4. **类型必须匹配**：上一个组件的输出必须能作为下一个组件的输入。`prompt_template` 吐出的是 `PromptValue`，`llm` 恰好接收这个；`llm` 吐出的是 `AIMessage`，普通的字符串无法直接拿，所以你通常需要在末尾加上 `StrOutputParser()` 把它转成纯字符串。
+5. **字典的传递**：当你使用 `chain.invoke()` 时，传进去的是一个字典。字典的 Key 必须和 `prompt_template` 里的 `{变量名}` 一模一样，否则会报 `KeyError`。
 
 ---
 
