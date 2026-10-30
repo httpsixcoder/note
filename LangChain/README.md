@@ -271,7 +271,7 @@ chain.invoke({"role": "顾问", "limit": 80, "question": "什么是向量检索�
 | 组件 | 作用 | 一句话示例 |
 |---|---|---|
 | `RunnableSequence` | 串行 | `a | b` |
-| `RunnableParallel` | 并行，输出 dict | `{"ctx": retriever, "q": RunnablePassthrough()}` |
+| `RunnableParallel` | 并行多个chin，输出 dict | `{"ctx": retriever, "q": RunnablePassthrough()}` |
 | `RunnablePassthrough` | 原样透传 | 把用户问题同时送进检索和提示词 |
 | `RunnableLambda` | 把普通函数变成 Runnable | 格式化、清洗 |
 | `.bind(...)` | 预绑参数 | `llm.bind(temperature=0)` |

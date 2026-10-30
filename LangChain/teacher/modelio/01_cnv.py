@@ -8,4 +8,4 @@ from dotenv import load_dotenv
 load_dotenv(verbose=True)
 
 print(os.getenv("OPENAI_API_KEY"))
-print(os.getenv("OPENAI_BASH_URL"))
+print(os.getenv("OPENAI_BASE_URL"))

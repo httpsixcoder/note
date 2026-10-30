@@ -26,7 +26,7 @@ async def get_master_intro(llm: BaseChatModel) -> None:
     try:
         resp = await llm.ainvoke([
             SystemMessage("你是哲学家"),
-            HumanMessage("简单介绍你自己"),
+            HumanMessage("简单介绍你自己，少于50字"),
         ])
     except Exception as e:
         print(e)
