@@ -62,3 +62,5 @@ coverage/
 *.env
 # 模拟文档
 LangChain/assets/*
+LangChain/bge-m3/*
+LangChain/volumes/*

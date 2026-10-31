@@ -397,6 +397,8 @@ chunks = splitter.split_documents(docs)
 
 ⚠️ 三个坑：① 表格被切断（先转 Markdown 再切）；② 页码/标题等元数据丢失（检索结果没法溯源）；③ `chunk_overlap` 设 0，跨段答案永远检索不到。
 
+**稠密向量（Dense）找的是“语义相似”，稀疏向量（Sparse）找的是“字面匹配（精确命中）”。**
+
 ### 6.3 嵌入与向量库
 
 ```python

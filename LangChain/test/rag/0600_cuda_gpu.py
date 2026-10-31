@@ -3,10 +3,11 @@ import torch
 from langchain_huggingface import HuggingFaceEmbeddings
 
 # 准备 1000 条测试数据
-test_texts = [f"这是第 {i} 条用来测试速度的文本数据" for i in range(1000)]
+test_texts1 = [f"这是第 {i} 条用来测试速度的文本数据" for i in range(100)]
+test_texts2 = [f"这是第 {i} 条用来测试速度的文本数据" for i in range(100)]
 
 
-def test_speed(device_type):
+def test_speed(device_type,test):
     print(f"\n========== 正在测试 {device_type.upper()} ==========")
 
     # 1. 加载模型，指定设备
@@ -20,7 +21,7 @@ def test_speed(device_type):
     start_time = time.time()
 
     # 3. 执行批量向量化
-    results = model.embed_documents(test_texts)
+    results = model.embed_documents(test)
 
     # 4. 结束计时
     end_time = time.time()
@@ -34,9 +35,10 @@ if __name__ == "__main__":
         print("❌ 显卡不可用，请检查 PyTorch 安装！")
     else:
         # 跑 CPU 测试
-        test_speed("cpu")
+        # test_speed("cpu")
+        test_speed("cpu",test_texts1)
         # 跑 GPU 测试
-        test_speed("cuda")
+        test_speed("cuda",test_texts2)
 
 """
 ========== 正在测试 CPU ==========
