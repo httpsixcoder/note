@@ -6,7 +6,7 @@ from pymilvus import MilvusClient
 
 # 获取连接Milvus的客户端对象
 def get_milvus_client():
-    return MilvusClient(url="http://localhost:19530")
+    return MilvusClient(uri="http://localhost:19530")
 
 
 # 删除数据
