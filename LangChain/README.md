@@ -444,6 +444,8 @@ retriever = store.as_retriever(
 
 ### 6.6 RAG 评估（决定你能不能写出数字）
 
+指标：**准确率保准，召回率保全，安全看召回，体验看准确**
+
 ```python
 # 1) 造 40 条 gold set：question / 参考答案要点 / 应命中的 chunk_id
 # 2) 离线跑：命中率、recall@k、忠实度、答案相关性、P95 延迟、单次成本

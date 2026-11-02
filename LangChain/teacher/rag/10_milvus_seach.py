@@ -1,10 +1,9 @@
 """
     测试：混合检索
 """
-from pymilvus import MilvusClient
-from FlagEmbedding import BGEM3FlagModel
-from sympy.series import limits
 import numpy as np
+from FlagEmbedding import BGEM3FlagModel
+from pymilvus import MilvusClient, AnnSearchRequest, RRFRanker
 
 
 # 获取连接Milvus的客户端对象
@@ -35,6 +34,7 @@ def embed_query(query: str):
     sparse_vec = {int(k): float(v) for k, v in result['lexical_weights'][0].items()}
     return dense_vec, sparse_vec
 
+
 # 稠密向量检索
 def milvus_search_by_dense(milvus: MilvusClient, collection_name: str, query: str):
     dense_vector, _ = embed_query(query)
@@ -54,6 +54,7 @@ def milvus_search_by_dense(milvus: MilvusClient, collection_name: str, query: st
     #         print(f"ID: {hit['id']} | 距离得分: {hit['distance']:.4f}")
     #         print(f"内容: {hit['entity']['text'][:50]}...\n")
 
+
 # 稀疏向量检索
 def milvus_search_by_sparse(milvus: MilvusClient, collection_name: str, query: str):
     _, sparse_vector = embed_query(query)
@@ -72,11 +73,41 @@ def milvus_search_by_sparse(milvus: MilvusClient, collection_name: str, query: s
     #         print(f"内容: {hit['entity']['text'][:50]}...\n")
 
 
+# 混合检索
+def milvus_hybrid_search(milvus: MilvusClient, collection_name: str, query: str):
+    # 将query转换成稠密向量和稀疏向量
+    dense_vector, sparse_vector = embed_query(query)
+    # 混合检索
+    # 设置稠密向量检索的方式
+    reqs_dens = AnnSearchRequest(
+        data=[dense_vector],  # 设置要检索的数据所对应的稠密向量
+        anns_field="dense_vector",  # 设置要检索的字段
+        param={"metric_type": "L2"},  # 设置计算相似度的方式
+        limit=5  # 设置检索的数据条数
+    )
+    # 设置稀疏向量检索的方式
+    reqs_sparse = AnnSearchRequest(
+        data=[sparse_vector],  # 设置要检索的数据所对应的稠密向量
+        anns_field="sparse_vector",  # 设置要检索的字段
+        param={"metric_type": "IP"},  # 设置计算相似度的方式
+        limit=5  # 设置检索的数据条数
+    )
+    # 混合检索
+    ressult = milvus_client.hybrid_search(
+        collection_name=collection_name,
+        reqs=[reqs_dens, reqs_sparse],
+        ranker=RRFRanker(k=60),  # 设置重排序方式 【倒数】
+        output_fields=["id", "text", "metadata"],
+        limit=5,
+    )
+    print(ressult)
+
 
 if __name__ == '__main__':
     milvus_client = get_milvus_client()
-    milvus_search_by_dense(milvus_client, collection_name="collection_demo", query="监护人需要旅行什么职责")
-    milvus_search_by_sparse(milvus_client, collection_name="collection_demo", query="监护人需要旅行什么职责")
+    # milvus_search_by_dense(milvus_client, collection_name="collection_demo", query="监护人需要旅行什么职责")
+    # milvus_search_by_sparse(milvus_client, collection_name="collection_demo", query="监护人需要旅行什么职责")
+    milvus_hybrid_search(milvus_client, collection_name="collection_demo", query="监护人需要旅行什么职责")
     """
     [   # 外层列表：代表第 1 个查询向量（因为你只查了一个 query，所以列表长度为 1）
         [   # 内层列表：代表命中的 Top-K 结果（按相似度排序，这里是前 2 个）
@@ -115,4 +146,3 @@ if __name__ == '__main__':
             print(f"内容: {text_content[:30]}...")
             print("-" * 30)
     """
-
