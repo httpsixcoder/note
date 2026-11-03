@@ -64,3 +64,5 @@ coverage/
 LangChain/assets/*
 LangChain/bge-m3/*
 LangChain/volumes/*
+# ====================LangGraph====================
+LangGraph/*.db
