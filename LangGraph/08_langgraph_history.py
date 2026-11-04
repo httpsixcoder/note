@@ -3,22 +3,22 @@
 """
 import operator
 import sqlite3
-from typing import TypedDict, Annotated, List
+from typing import TypedDict, Annotated
 
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.constants import END
 from langgraph.graph import StateGraph
 
-coon = sqlite3.connect(
+conn = sqlite3.connect(
     "./test.db",
     check_same_thread=False
 )
-checkPointer = SqliteSaver(coon)
+checkPointer = SqliteSaver(conn)
 
 
 # 创建状态类
 class MyState(TypedDict):
-    aggregate: Annotated[List[str], operator.add]
+    aggregate: Annotated[list[str], operator.add]
 
 
 # 创建节点

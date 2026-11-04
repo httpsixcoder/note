@@ -1,5 +1,5 @@
 """
-    测试：LangGraph入门案例
+    测试：LangGraph入门案例【改进】
     LangGraph步骤：
         1.创建状态类,需要基础TypedDict，对象可以以字典的方式访问
         2.创建节点，节点的本质是函数
@@ -12,9 +12,10 @@
         5.编译StateGraph对象得到图对象
         6.执行图对象
 """
+import logging
 from typing import TypedDict
 
-from langgraph.constants import START, END
+from langgraph.constants import END
 from langgraph.graph import StateGraph
 
 
@@ -27,20 +28,24 @@ class MyState(TypedDict):
 
 
 # 2.创建节点，节点的本质是函数
-def rag_node(state: MyState):
+def rag_node(state: MyState)-> dict[str, str]:
     print(f"rag_node:{state}")
     return {"rag_result": "这是RAG检索的结果"}
 
 
-def web_node(state: MyState):
+
+def web_node(state: MyState)-> dict[str, str]:
     print(f"web_node:{state}")
     return {"web_result": "这是Web查询的结果"}
 
 
-def final_node(state: MyState):
-    print(f"final_answer:{state}")
-    return {
-        "final_answer": f" query:{state["query"]},rag_result:{state['rag_result']}, web_result:{state['web_result']}"}
+def final_node(state: MyState)-> dict[str, str]:
+    answer = (
+        f"query:{state['query']}, "
+        f"rag_result:{state['rag_result']}, "
+        f"web_result:{state['web_result']}"
+    )
+    return {"final_answer": answer}
 
 
 # 3.创建StateGraph对象

@@ -1,61 +1,67 @@
 """
-    测试：LangGraph当中节点所接收的是非全局的状态,状态数据隔离,节点间的geli
+    测试：LangGraph当中节点所接收的是非全局的状态,状态数据隔离,节点间的隔离
 """
 
 from typing import TypedDict
 
-from langgraph.constants import END
+from langgraph.constants import END, START
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 
 
-# 1.创建状态类
 class MyState(TypedDict):
     query: str
+    rag_result: str
+    web_result: str
     final_answer: str
 
 
-# 创建非全局的私有状态
 class ResultState(TypedDict):
     query: str
     rag_result: str
     web_result: str
 
 
-# 2.创建节点，节点的本质是函数
-def rag_node(state: MyState):
+def rag_node(state: MyState) -> dict[str, str]:
     print(f"rag_node:{state}")
     return {"rag_result": "这是RAG检索的结果"}
 
 
-def web_node(state: MyState):
+def web_node(state: MyState) -> dict[str, str]:
     print(f"web_node:{state}")
     return {"web_result": "这是Web查询的结果"}
 
 
-def final_node(state: ResultState):
-    print(f"final_answer:{state}")
-    return {
-        "final_answer": f" query:{state["query"]},rag_result:{state['rag_result']}, web_result:{state['web_result']}"}
+def final_node(state: ResultState) -> dict[str, str]:
+    print(f"final_node:{state}")
+    answer = (
+        f"query:{state['query']}, "
+        f"rag_result:{state['rag_result']}, "
+        f"web_result:{state['web_result']}"
+    )
+    return {"final_answer": answer}
 
 
-# 3.创建StateGraph对象
-builder = StateGraph(state_schema=MyState)
+def build_graph() -> CompiledStateGraph:
+    builder = StateGraph(state_schema=MyState)
 
-# 4.添加节点
-builder.add_node(rag_node)
-builder.add_node(web_node)
-builder.add_node(final_node)
-# 4.使用节点的名称添加边
+    builder.add_node("rag", rag_node)
+    builder.add_node("web", web_node)
+    # ✅ 关键：用 input_schema 限制 final 节点可见的字段
+    builder.add_node("final", final_node, input_schema=ResultState)
 
-builder.set_entry_point("rag_node")
-builder.set_entry_point("web_node")
-builder.add_edge("rag_node", "final_node")
-builder.add_edge("web_node", "final_node")
-builder.add_edge("final_node", END)
+    # 并行 fan-out：必须用 add_edge(START, ...) 两次
+    builder.add_edge(START, "rag")
+    builder.add_edge(START, "web")
 
-# 5.编译StateGraph得到图对象
-graph = builder.compile()
+    builder.add_edge("rag", "final")
+    builder.add_edge("web", "final")
+    builder.add_edge("final", END)
 
-# 6.执行图对象
-result = graph.invoke({"query": "测试langGraph"})
-print(result)
+    return builder.compile()
+
+
+if __name__ == "__main__":
+    graph = build_graph()
+    result = graph.invoke({"query": "测试langGraph"})
+    print(result)

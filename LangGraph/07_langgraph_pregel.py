@@ -1,5 +1,10 @@
 """
     测试：获取图对象的节点、通道、节点的订阅和写入
+    节点 = 用户函数 + 订阅哪些通道 + 完成后往哪些通道写（编译后是 PregelNode 包装对象）
+    边 = builder 阶段声明的节点间传递关系
+    通道 = 承载信息的邮箱，分两类：状态通道（State 字段，存数据）和触发通道（branch:to:X，传控制信号）。边编译后消失，融化为一对读写关系
+    订阅（triggers） = 哪些通道的更新会唤起我（输入侧）
+    写入（writers） = 我完成后向哪些通道发更新（输出侧，控制流和数据流都走这里）
 """
 import operator
 from typing import TypedDict, Annotated, List
